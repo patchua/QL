@@ -15,7 +15,7 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	--     2. ID присвоенный транзакции
 	--     3. Ответноге сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
-		return false,0,"DSLib.sendLimit(): Can`t send order. Nil parameters."
+		return false,0,"QL.sendLimit(): Can`t send order. Nil parameters."
 	end
 	local trans_id=math.random(2000000000)
 	local transaction={
@@ -38,9 +38,9 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return false,trans_id, "DSLib.sendLimit():"..res
+		return false,trans_id, "QL.sendLimit():"..res
 	else
-		return true,trans_id, "DSLib.sendLimit(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+		return true,trans_id, "QL.sendLimit(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
 function sendMarket(class,security,direction,volume,account,client_code,comment)
@@ -52,7 +52,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	--     2. ID присвоенный транзакции
 	--     3. Ответноге сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil  or volume==nil or account==nil) then
-		return false,0,"DSLib.sendMarket(): Can`t send order. Nil parameters."
+		return false,0,"QL.sendMarket(): Can`t send order. Nil parameters."
 	end
 	local FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 	local trans_id=math.random(2000000000)
@@ -85,9 +85,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return false,trans_id, "DSLib.sendMarket():"..res
+		return false,trans_id, "QL.sendMarket():"..res
 	else
-		return true,trans_id, "DSLib.sendMarket(): Market order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+		return true,trans_id, "QL.sendMarket(): Market order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
 function moveOrders()
@@ -97,7 +97,7 @@ end
 function sendRPS(class,security,direction,price,volume,account,client_code,partner)
     -- функция отправки заявки на внебиржевую сделку
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or partner==nil) then
-		return false,"DSLib.sendRPS(): Can`t send order. Nil parameters."
+		return false,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
 	local trans_id=math.random(2000000000)
@@ -120,15 +120,15 @@ function sendRPS(class,security,direction,price,volume,account,client_code,partn
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return false,trans_id, "DSLib.sendRPS():"..res
+		return false,trans_id, "QL.sendRPS():"..res
 	else
-		return true,trans_id, "DSLib.sendRPS(): RPS order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Partner="..partner.." Trans_id="..trans_id
+		return true,trans_id, "QL.sendRPS(): RPS order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Partner="..partner.." Trans_id="..trans_id
 	end
 end
 function sendReportOnRPS(class,operation,key)
     -- отправка отчета по сделки для исполнения
 	if(class==nil or operation==nil or key==nil) then
-		return false,"DSLib.sendRPS(): Can`t send order. Nil parameters."
+		return false,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
 	local trans_id=math.random(2000000000)
@@ -141,9 +141,9 @@ function sendReportOnRPS(class,operation,key)
 	}
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return false,trans_id, "DSLib.sendReportOnRPS():"..res
+		return false,trans_id, "QL.sendReportOnRPS():"..res
 	else
-		return true,trans_id, "DSLib.sendReportOnRPS(): ReportOnRPS order sended sucesfully. Class="..class.." Oper="..operation.." Key="..key.." Trans_id="..trans_id
+		return true,trans_id, "QL.sendReportOnRPS(): ReportOnRPS order sended sucesfully. Class="..class.." Oper="..operation.." Key="..key.." Trans_id="..trans_id
 	end
 end
 function killOrder(class,security,orderkey)
@@ -152,10 +152,10 @@ function killOrder(class,security,orderkey)
 	-- ВАЖНО! Данная функция не гарантирует снятие заявки
 	-- Возвращает сообщение сервера в случае ошибки выявленной сервером Квик либо строку с информацией о транзакции
 	if (class==nil or security==nil or orderkey==nil) then
-		return "DSLib.killOrder(): Can`t kill order. Nil parameters."
+		return "QL.killOrder(): Can`t kill order. Nil parameters."
 	end
 	if orderkey==0 then
-		return "DSLib.killOrder(): Can`t kill order. OrderKey=0."
+		return "QL.killOrder(): Can`t kill order. OrderKey=0."
 	end
 	local trans_id=math.random(2000000000)
 	local transaction={
@@ -167,9 +167,9 @@ function killOrder(class,security,orderkey)
 	}
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return false,"DSLib.killOrder(): "..res
+		return false,"QL.killOrder(): "..res
 	else
-		return true,"DSLib.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..class.." Sec="..security.." Key="..orderkey.." Trans_id="..trans_id
+		return true,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..class.." Sec="..security.." Key="..orderkey.." Trans_id="..trans_id
 	end
 end
 function killAllOrders(table_mask)
@@ -211,16 +211,25 @@ function killAllOrders(table_mask)
 			end
 		end
 	end
-	return true,"DSLib.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
+	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
 end
-function toLog(file_path,str)
-	-- запись в лог строки
+function toLog(file_path,value)
+	-- запись в лог параметра value
+	-- value может быть числом, строкой или ДВУМЕРНОЙ таблицей (таблица элементом которой является таблица записана не будет!)
 	-- file_path  -  путь к файлу
 	-- файл открывается на дозапись и закрывается после записи строки
-	if file_path~=nil and str~=nil then
+	if file_path~=nil and value~=nil then
 		lf=io.open(file_path,"a+")
 		if lf~=nil then
-			lf:write(getHRDateTime().." "..str.."\n")
+			if type(value)=="string" or type(value)=="number" then
+				lf:write(getHRDateTime().." "..value.."\n")
+			elseif type(value)=="table" then
+				local k,v,str=0,0,""
+				for k,v in pairs(value) do
+					str=str..k.."="..v..";"
+				end
+				lf:write(getHRDateTime().." "..str.."\n")
+			end
 			lf:flush()
 			lf:close()
 		end
@@ -251,11 +260,14 @@ function toPrice(class,security,value)
 end
 function getPosFromTable(table,value)
 	-- Возвращает ключ значения value из таблицы table, иначе -1
+	toLog("temp.txt","val="..value)
 	if (table==nil or value==nil) then
+		toLog("temp.txt","nil")
 		return -1
 	else
 		local k,v
 		for k,v in pairs(table) do
+			toLog("temp.txt","v="..v.." val="..value)
 			if v==value then
 				return k
 			end
