@@ -10,6 +10,9 @@ require"socket"
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 --require"iuplua"
 --require"iupluacontrols"
+--[[
+Trading Module
+]]--
 function sendLimit(class,security,direction,price,volume,account,client_code,comment)
 	-- отправка лимитированной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
@@ -100,6 +103,9 @@ function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		return nil,"QL.moveOrder(): Can`t move order. Nil parameters."
 	end
 	local forder=getRowFromTable("orders","ordernum",fo_number)
+	if forder==nil then
+		return nil,"QL.moveOrder(): Can`t find ordernumber="..fo_number.." in orders table!"
+	end
 	if string.find(FUT_OPT_CLASSES,forder.class_code)~=nil then
 		return moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	else
@@ -117,6 +123,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		return nil,"QL.moveOrderSpot(): Can`t move order. Nil parameters."
 	end
 	local forder=getRowFromTable("orders","ordernum",fo_number)
+	if forder==nil then
+		return nil,"QL.moveOrderFO(): Can`t find ordernumber="..fo_number.." in orders table!"
+	end
 	if (orderflags2table(forder.flags).cancelled==1 or (orderflags2table(forder.flags).done==1 and forder.balance==0)) then
 		return nil,"QL.moveOrderSpot(): Can`t move cancelled or done order!"
 	end
@@ -127,6 +136,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,forder.qty,forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
+			if sorder==nil then
+				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+			end
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,sorder.qty,sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
@@ -136,7 +148,12 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			return sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,forder.qty,forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,forder.qty,forder.account,forder.client_code,forder.comment)
+			if trid~=nil then
+				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
+			else
+				return nil,"QL.moveOrderSpot(): Order not moved! Msg="..ms
+			end
 		end
 	elseif mode==1 then
 		--Если MODE=1, то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
@@ -145,6 +162,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,fo_q,forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
+			if sorder==nil then
+				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+			end
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,so_q,sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
@@ -166,6 +186,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если количество бумаг в каждой из снятых заявок совпадает со значениями, указанными после FIRST_ORDER_NEW_QUANTITY и SECOND_ORDER_NEW_QUANTITY, то в торговую систему отправляются две новые заявки с соответствующими параметрами.
 		if so_number~=nil and so_p~=nil and so_q~=nil then
 			local sorder=getRowFromTable("orders","ordernum",so_number)
+			if sorder==nil then
+				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+			end
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			if forder.balance==fo_q and sorder.balance==so_q then
@@ -237,6 +260,9 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	end
 	local trans_id=math.random(2000000000)
 	local order=getRowFromTable("orders","ordernum",fo_number)
+	if order==nil then
+		return nil,"QL.moveOrderFO(): Can`t find ordernumber="..fo_number.." in orders table!"
+	end
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["CLASSCODE"]=order.class_code,
@@ -375,6 +401,9 @@ function killAllOrders(table_mask)
 	end
 	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
 end
+--[[
+Support Functions
+]]--
 function toLog(file_path,value)
 	-- запись в лог параметра value
 	-- value может быть числом, строкой или ДВУМЕРНОЙ таблицей (таблица элементом которой является таблица записана не будет!)
