@@ -109,7 +109,7 @@ function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if string.find(FUT_OPT_CLASSES,forder.class_code)~=nil then
 		return moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	else
-		return moveOrderSPOT(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
+		return moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	end
 end
 function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
@@ -406,7 +406,7 @@ Support Functions
 ]]--
 function toLog(file_path,value)
 	-- запись в лог параметра value
-	-- value может быть числом, строкой или ДВУМЕРНОЙ таблицей (таблица элементом которой является таблица записана не будет!)
+	-- value может быть числом, строкой или таблицей 
 	-- file_path  -  путь к файлу
 	-- файл открывается на дозапись и закрывается после записи строки
 	if file_path~=nil and value~=nil then
@@ -415,16 +415,25 @@ function toLog(file_path,value)
 			if type(value)=="string" or type(value)=="number" then
 				lf:write(getHRDateTime().." "..value.."\n")
 			elseif type(value)=="table" then
-				local k,v,str=0,0,""
-				for k,v in pairs(value) do
-					str=str..k.."="..v..";"
-				end
-				lf:write(getHRDateTime().." "..str.."\n")
+				lf:write(getHRDateTime().." "..table2string(value).."\n")
 			end
 			lf:flush()
 			lf:close()
 		end
 	end
+end
+function table2string(table)
+	local k,v,str=0,0,""
+	for k,v in pairs(table) do
+		if type(v)=="string" or type(v)=="number" then
+			str=str..k.."="..v
+		elseif type(v)=="table"then
+			str=str..k.."={"..table2string(v).."}"
+		elseif type(v)=="function" then
+			str=str..tostring(v)
+		end
+	end
+	return str
 end
 function getHRTime()
 	-- возвращает время с милисекундами в виде строки
@@ -510,7 +519,7 @@ function getRowFromTable(table_name,key,value)
 	-- возвращаем строку (таблицу Луа) из таблицы table_name с столбцом key равным value.
 	-- table_name[key].value
 	local i
-	for i=0,getNumberOf(table_name),1 do
+	for i=getNumberOf(table_name),0,-1 do
 		if getItem(table_name,i)[key]==value then
 			return getItem(table_name,i)
 		end
