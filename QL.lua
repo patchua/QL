@@ -31,17 +31,17 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["QUANTITY"]=volume,
+		["QUANTITY"]=tostring(volume),
 		["PRICE"]=price,
-		["ACCOUNT"]=account
+		["ACCOUNT"]=tostring(account)
 	}
 	if comment~=nil then
-		transaction.comment=comment
+		transaction.comment=tostring(comment)
 	end
 	if client_code==nil then
-		transaction.client_code=account
+		transaction.client_code=tostring(account)
 	else
-		transaction.client_code=client_code
+		transaction.client_code=tostring(client_code)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -119,7 +119,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	-- Возвращаем 2 параметра :
 	-- 1. Nil - если неудача или номер транзакции (2-й если 2 заявки)
 	-- 2. Диагностиеское сообщение
-	if (order_number==nil or new_price==nil or regim==nil) then
+	if (fo_number==nil or fo_p==nil) then
 		return nil,"QL.moveOrderSpot(): Can`t move order. Nil parameters."
 	end
 	local forder=getRowFromTable("orders","ordernum",fo_number)
@@ -133,22 +133,25 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если MODE=0, то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
 		--В торговую систему отправляются две новые заявки, при этом изменяется только цена заявок, количество остается прежним;
 		if so_number~=nil and so_p~=nil then
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,forder.qty,forder.account,forder.client_code,forder.comment)
+			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
+			toLog("ko.txt",ms)
+			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
-			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
-			trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,sorder.qty,sorder.account,sorder.client_code,sorder.comment)
+			_,ms=killOrder(so_number,sorder.seccode,sorder.class_code)
+			toLog("ko.txt",ms)
+			trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,tostring(sorder.balance),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 			else
 				return nil,"QL.moveOrderSpot(): One or more orders not moved! Msg1="..ms1.." Msg2="..ms2
 			end
 		else
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,forder.qty,forder.account,forder.client_code,forder.comment)
+			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
+			toLog("ko.txt",ms)
+			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -160,13 +163,13 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--В торговую систему отправляются две новые заявки, при этом изменится как цена заявки, так и количество;
 		if so_number~=nil and so_p~=nil and so_q~=nil then
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,fo_q,forder.account,forder.client_code,forder.comment)
+			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
-			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,so_q,sorder.account,sorder.client_code,sorder.comment)
+			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 			else
@@ -174,7 +177,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,fo_q,forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -192,8 +195,8 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			if forder.balance==fo_q and sorder.balance==so_q then
-				local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,fo_q,forder.account,forder.client_code,forder.comment)
-				local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,so_q,sorder.account,sorder.client_code,sorder.comment)
+				local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+				local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 				if trid~=nil and trid2~=nil then
 					return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 				else
@@ -204,7 +207,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,fo_q,forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -231,6 +234,7 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		transaction["FIRST_ORDER_NUMBER"]=tostring(fo_number)
 		transaction["FIRST_ORDER_NEW_PRICE"]=fo_p
 		transaction["FIRST_ORDER_NEW_QUANTITY"]="0"
+		transaction["MODE"]=tostring(mode)
 	elseif mode==1 then
 		if fo_q==nil or fo_q==0 then
 			return nil,"QL.moveOrder(): Mode=1. First Order Quantity can`t be nil or zero!"
@@ -243,6 +247,7 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		transaction["FIRST_ORDER_NUMBER"]=tostring(fo_number)
 		transaction["FIRST_ORDER_NEW_PRICE"]=fo_p
 		transaction["FIRST_ORDER_NEW_QUANTITY"]=tostring(fo_q)
+		transaction["MODE"]=tostring(mode)
 	elseif mode==2 then
 		if fo_q==nil or fo_q==0 then
 			return nil,"QL.moveOrder(): Mode=2. First Order Quantity can`t be nil or zero!"
@@ -255,6 +260,7 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		transaction["FIRST_ORDER_NUMBER"]=tostring(fo_number)
 		transaction["FIRST_ORDER_NEW_PRICE"]=fo_p
 		transaction["FIRST_ORDER_NEW_QUANTITY"]=tostring(fo_q)
+		transaction["MODE"]=tostring(mode)
 	else
 		return nil,"QL.moveOrder(): Mode out of range! mode can be from {0,1,2}"
 	end
@@ -263,12 +269,12 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if order==nil then
 		return nil,"QL.moveOrderFO(): Can`t find ordernumber="..fo_number.." in orders table!"
 	end
-	local transaction={
-		["TRANS_ID"]=tostring(trans_id),
-		["CLASSCODE"]=order.class_code,
-		["SECCODE"]=order.seccode,
-		["ACTION"]="MOVE_ORDERS"
-	}
+	transaction["TRANS_ID"]=tostring(trans_id)
+	transaction["CLASSCODE"]=order.class_code
+	transaction["SECCODE"]=order.seccode
+	transaction["ACTION"]="MOVE_ORDERS"
+
+	toLog("move.txt",transaction)
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil, "QL.moveOrderFO():"..res
@@ -338,26 +344,26 @@ function killOrder(orderkey,security,class)
 	local trans_id=math.random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
-		["SECCODE"]=security,
 		["ACTION"]="KILL_ORDER",
 		["ORDER_KEY"]=tostring(orderkey)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
 		local order=getRowFromTable("orders","ordernum",orderkey)
-		transaction.class_code=order.class_code
+		transaction.classcode=order.class_code
 		transaction.seccode=order.seccode
 	elseif	security~=nil then
 		transaction.seccode=security
-		transaction.class_code=getSecurityInfo("",security).class_code
+		transaction.classcode=getSecurityInfo("",security).class_code
 	else
 		transaction.seccode=security
-		transaction.class_code=class 
+		transaction.classcode=class 
 	end
+	toLog("ko.txt",transaction)
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil,"QL.killOrder(): "..res
 	else
-		return true,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..class.." Sec="..security.." Key="..orderkey.." Trans_id="..trans_id
+		return true,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
 	end
 end
 function killAllOrders(table_mask)
