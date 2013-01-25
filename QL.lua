@@ -8,6 +8,7 @@ package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.
 require"bit"
 require"socket"
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
+NOTRANDOMIZED=true
 --require"iuplua"
 --require"iupluacontrols"
 --[[
@@ -23,6 +24,10 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
 		return nil,"QL.sendLimit(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
 	end
 	local trans_id=math.random(2000000000)
 	local transaction={
@@ -59,6 +64,10 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil  or volume==nil or account==nil) then
 		return nil,"QL.sendMarket(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
 	end
 	local trans_id=math.random(2000000000)
 	local transaction={
@@ -134,14 +143,14 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--В торговую систему отправляются две новые заявки, при этом изменяется только цена заявок, количество остается прежним;
 		if so_number~=nil and so_p~=nil then
 			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
-			toLog("ko.txt",ms)
+			--toLog("ko.txt",ms)
 			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
 			_,ms=killOrder(so_number,sorder.seccode,sorder.class_code)
-			toLog("ko.txt",ms)
+			--toLog("ko.txt",ms)
 			trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,tostring(sorder.balance),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
@@ -150,7 +159,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
-			toLog("ko.txt",ms)
+			--toLog("ko.txt",ms)
 			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
@@ -264,6 +273,10 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	else
 		return nil,"QL.moveOrder(): Mode out of range! mode can be from {0,1,2}"
 	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
 	local trans_id=math.random(2000000000)
 	local order=getRowFromTable("orders","ordernum",fo_number)
 	if order==nil then
@@ -274,7 +287,7 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	transaction["SECCODE"]=order.seccode
 	transaction["ACTION"]="MOVE_ORDERS"
 
-	toLog("move.txt",transaction)
+	--toLog("move.txt",transaction)
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil, "QL.moveOrderFO():"..res
@@ -286,6 +299,10 @@ function sendRPS(class,security,direction,price,volume,account,client_code,partn
     -- функция отправки заявки на внебиржевую сделку
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or partner==nil) then
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
 	end
 	local trans_id=math.random(2000000000)
 	local transaction={
@@ -318,6 +335,10 @@ function sendReportOnRPS(class,operation,key)
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
 	local trans_id=math.random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
@@ -341,6 +362,10 @@ function killOrder(orderkey,security,class)
 	if orderkey==nil or tonumber(orderkey)==0 then
 		return nil,"QL.killOrder(): Can`t kill order. OrderKey nil or zero"
 	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
 	local trans_id=math.random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
@@ -363,7 +388,7 @@ function killOrder(orderkey,security,class)
 	if res~="" then
 		return nil,"QL.killOrder(): "..res
 	else
-		return true,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
+		return trans_id,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
 	end
 end
 function killAllOrders(table_mask)
