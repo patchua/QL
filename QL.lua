@@ -480,14 +480,7 @@ function toPrice(security,value)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
 	local scale=getParamEx(getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
-	local pos
-	_,pos=string.find(tostring(value),"%d+.")
-	if tonumber(scale)>0 then
-		value=string.sub(value,0,pos+scale)
-	else
-		value=string.sub(value,0,pos-1)
-	end 
-	return tostring(value)
+	return string.format("%."..string.format("%d",scale).."f",value)
 end
 function getPosFromTable(table,value)
 	-- Возвращает ключ значения value из таблицы table, иначе -1
