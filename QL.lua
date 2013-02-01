@@ -432,6 +432,32 @@ function killAllOrders(table_mask)
 	end
 	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
 end
+function getPosition(security)
+    --возвращает чистую позицию по инструменту
+	local class_code=getSecurityInfo("",security).class_code
+    if string.find(FUT_OPT_CLASSES,class_code)~=nil then
+	--futures
+		local row=getRowFromTable("futures_client_holding","seccode",security)
+		if row~=nil then
+			if row.totalnet==nil then
+				return 0
+			else
+				return row.totalnet
+			end
+		end
+	else
+	-- spot
+		local row=getRowFromTable("account_positions","seccode",security)
+		if row~=nil then
+			if row.currentpos==nil then
+				return 0
+			else
+				return row.currentpos
+			end
+		end
+	end
+    return 0
+end
 --[[
 Support Functions
 ]]--
