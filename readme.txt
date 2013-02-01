@@ -77,3 +77,5 @@ Version 0.3
 -- 2. Диагностиеское сообщение
 18. function table2string(table)
 -- превращение таблицы в строку
+19. function getPosition(security)
+-- возвращает текущую позицию по инструменту
