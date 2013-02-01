@@ -383,7 +383,7 @@ function killOrder(orderkey,security,class)
 		transaction.seccode=security
 		transaction.classcode=class 
 	end
-	toLog("ko.txt",transaction)
+	--toLog("ko.txt",transaction)
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil,"QL.killOrder(): "..res
@@ -399,7 +399,7 @@ function killAllOrders(table_mask)
 	local tokill=true
 	local row={}
 	local result_str=""
-	for i=1,getNumberOf("orders"),1 do
+	for i=0,getNumberOf("orders"),1 do
 		row=getItem("orders",i)
 		tokill=false
 		--toLog(log,"Row "..i.." onum="..row.ordernum)
@@ -420,7 +420,7 @@ function killAllOrders(table_mask)
 		end
 		if tokill then
 			--toLog(log,"kill onum"..row.ordernum)
-			res,_=killOrder(row.class_code,row.seccode,tostring(row.ordernum))
+			res,ms=killOrder(tostring(row.ordernum),row.seccode,row.class_code)
 			result_num=result_num+1
 			--toLog(log,ms)
 			if res then
