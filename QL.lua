@@ -470,23 +470,15 @@ function toLog(file_path,value)
 		lf=io.open(file_path,"a+")
 		if lf~=nil then
 			if type(value)=="string" or type(value)=="number" then
-				if io.type(lf)~="file" then
-					lf=io.open(file_path,"a+")
-				end
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
 				lf:write(getHRDateTime().." "..value.."\n")
 			elseif type(value)=="table" then
-				if io.type(lf)~="file" then
-					lf=io.open(file_path,"a+")
-				end
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
 				lf:write(getHRDateTime().." "..table2string(value).."\n")
 			end
-			if io.type(lf)~="file" then
-				lf=io.open(file_path,"a+")
-			end
+			if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
 			lf:flush()
-			if io.type(lf)=="file" then
-				lf:close()
-			end
+			if io.type(lf)=="file" then	lf:close() end
 		end
 	end
 end
