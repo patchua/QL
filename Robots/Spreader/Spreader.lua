@@ -6,14 +6,15 @@ settings={}
 --params
 security="UXU2S"
 class="BQUOTEFUT"
-work_spread=20
+work_spread=10
 wait_slippage=15
 alert_slippage=30
-minprofit=11
+minprofit=5
 clc="game998"
 account="game998"
 bidEnable=true
 askEnable=false
+volume=1
 --var
 bid_order={}
 bid_status=""
@@ -84,15 +85,18 @@ function OnQuote(pclass,psecurity)
 end
 
 function workbid(quotes)
-	toLog(log,"Workbid started")
+	toLog(log,"Workbid started. status="..bid_status)
 	local sbid=tonumber(quotes.bid[quotes.bid_count-2].price)
 	local sask=tonumber(quotes.offer[2].price)
 	local bask=tonumber(quotes.offer[1].price)
+	local baskvol=tonumber(quotes.offer[1].quantity)
 	local bbid=tonumber(quotes.bid[quotes.bid_count-1].price)
+	local bbidvol=tonumber(quotes.bid[quotes.bid_count-1].quantity)
 	local spread=bask-bbid
+	toLog(log,"sbid="..sbid.." bbid="..bbid.." bbidvol="..bbidvol.." bask="..bask.." sask="..sask.." baskvol="..baskvol)
 	if bid_status=="" and spread>(work_spread-1)*step then
 		-- no bid, can send
-		toLog(log,"Can send bid for open. Spread="..spread)
+		toLog(log,"Can send bid for open. Spread="..spread..class..security.."B"..toPrice(security,bbid+step)..volume..account..clc.."openbid")
 		local id,ms=sendLimit(class,security,"B",toPrice(security,bbid+step),volume,account,clc,"openbid")
 		if id~=nil then
 			transactions[id]="bid"
@@ -102,7 +106,7 @@ function workbid(quotes)
 	elseif bid_status=="open" and spread<work_spread*step then
 		--have bid, tiny spread, move farther
 		toLog(log,"Move bid farther. Our_price="..bid_order.price.." spread="..spread)
-		local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bbid-wait_slippage))
+		local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bbid-wait_slippage*step))
 		if id~=nil then
 			transactions[id]="bid"
 			bid_status="waitremote"
@@ -121,13 +125,22 @@ function workbid(quotes)
 		else
 			--need to move bid but if we do this, spread wolud be tiny. move farther
 			toLog(log,"Move bid farther. Our_price="..bid_order.price.." spread="..(bask-bbid))
-			local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bbid-wait_slippage))
+			local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bbid-wait_slippage*step))
 			if id~=nil then
 				transactions[id]="bid"
 				bid_status="waitremote"
 			end
 			toLog(log,ms)
 		end
+	elseif bid_status=="open" and bid_order.price>sbid+1 and bbidvol==volume then
+		-- have bid, can move to better position
+		toLog(log,"Move open bid closer to second. Our_price="..bid_order.price.." SBid="..sbid.." BBidVol="..bbidvol)
+		local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,sbid+1))
+		if id~=nil then
+			transactions[id]="bid"
+			bid_status="waitopen"
+		end
+		toLog(log,ms)
 	elseif bid_status=="remote" and spread>(work_spread-1)*step then
 		--have remote bid, spread became good,move to be first and wait for open
 		toLog(log,"Move remote bid to open position. Our_price="..bid_order.price.." spread="..spread)
@@ -137,7 +150,7 @@ function workbid(quotes)
 			bid_status="waitopen"
 		end
 		toLog(log,ms)
-	elseif bid_status=="close" and (bid_bad or bask-step>bid_open_price+minprofit) and bask<bid_order.price then
+	elseif bid_status=="close" and (bid_bad or bask-step>bid_open_price+minprofit*step) and bask<bid_order.price then
 		-- have close on bid, found better ask
 		toLog(log,"Move close bid lower. BAsk="..bask.." Bad="..tostring(bid_bad).." Our_price="..bid_order.price)
 		local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bask-step))
@@ -146,9 +159,9 @@ function workbid(quotes)
 			bid_staus="waitclose"
 		end
 		toLog(log,ms)
-	elseif bid_status=="close" and bask>bid_order.price then
+	elseif bid_status=="close" and sask-1>bid_order.price and bask==volume then
 		--can move close to better position
-		toLog(log,"MOve close bid to better position. Our_price="..bid_order.price.." BAsk="..bask)
+		toLog(log,"MOve close bid to better position. Our_price="..bid_order.price.." SAsk="..sask.." BAskVol="..baskvol)
 		local id,ms=moveOrder(0,bid_order.ordernum,toPrice(security,bask-step))
 		if id~=nil then
 			tramsactions[id]="bid"
@@ -156,8 +169,9 @@ function workbid(quotes)
 		end
 		toLog(log,ms)
 	else
-		toLog(log,"Nothing to do. Bask="..bask.." Sask="..sask.." Bbid="..bbid.." sbid="..sbid.." bid_status="..bid_status)
+		--toLog(log,"Nothing to do. Bask="..bask.." Sask="..sask.." Bbid="..bbid.." sbid="..sbid.." bid_status="..bid_status)
 	end
+	toLog(log,"Workbid ended.")
 end
 
 function OnAllTrade(trade)
@@ -169,7 +183,6 @@ end
 
 function OnOrder(order)
 	if transactions[order.trans_id]=="bid" then
-		transactions[order.trans_id]=""
 		toLog(log,"New bid order received.")
 		bid_order={}
 		bid_order=order
@@ -196,7 +209,6 @@ function OnOrder(order)
 			end
 		end
 	elseif transactions[order.trans_id]=="ask" then
-		transactions[order.trans_id]=""
 		toLog(log,"New ask order received.")
 		ask_order={}
 		ask_order=order
