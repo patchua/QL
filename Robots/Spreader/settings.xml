@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<table>
+<security value="UXU2S" />
+<class value="BQUOTEFUT" />
+<clientcode value="game998" />
+<account value="game998" />
+<bidEnable value="1" />
+<askEnable value="0" />
+<work_spread value="10" />
+<wait_slippage value="5" />
+<volume value="1" />
+<alert_slippage value="10" />
+<minprofit value="5" />
+</table>
