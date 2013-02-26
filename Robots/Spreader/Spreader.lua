@@ -278,7 +278,7 @@ function workask(quotes)
 		--move remote ask to be in wait_slippage steps after best ask
 		toLog(log,"Move remote ask. Our_price="..ask_order.price.." BAsk="..bask)
 		transactions[ask_order.trans_id]=""
-		local id,ms=moveOrder(0,ask_order.ordernum,toPrice(security,bask+wait_slippager*step))
+		local id,ms=moveOrder(0,ask_order.ordernum,toPrice(security,bask+wait_slippage*step))
 		if id~=nil then
 			transactions[id]="ask"
 			ask_status="waitremote"
