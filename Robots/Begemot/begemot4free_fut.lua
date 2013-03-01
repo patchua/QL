@@ -1,6 +1,8 @@
--- version 0.3.0
+-- version 0.3.2
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
--- transaction sync mechanizm
+-- 0.3 transaction sync mechanizm
+-- 0.3.1 reduce exess transactions
+-- 0.3.2 bug in change orders on update
 require"QL"
 require"luaxml"
 log="begemot.log"
@@ -120,6 +122,8 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,soffer,sec_code)
 		trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
 		toLog(log,ms)
+		
+		-- приводит к лишним сделкам при закрытии 
 	end
 	--toLog(log,"TradeBid ended. "..(os.clock()-st))
 end
@@ -156,6 +160,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,sbid,code)
 		trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(code,sbid+watch_list.minstep))
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
 		toLog(log,ms)
+	-- приводит к лишним сделкам при закрытии 
 	end
 	--toLog(log,"Trade Offer ended. "..(os.clock()-st))
 end
@@ -236,6 +241,7 @@ function OnOrderDo(order)
 	if bad_transactions[order.trans_id]~="" and bad_transactions[order.trans_id]~=nil then
 		toLog(log,"Bad transaction arrived ID="..order.trans_id.." Status="..bad_transactions[order.trans_id])
 		toLog(log,order)
+		toLog(log,orderflags2table(order.flags))
 		if orderflags2table(order.flags).active==1 then
 			local tr,ms=killOrder(order.ordernum,order.seccode,order.class_code)
 			if tr~=nil then bad_transactions[tr]="cancell"..bad_transactions[order.trans_id] end
@@ -247,7 +253,7 @@ function OnOrderDo(order)
 	end
 	if transactions[order.trans_id]=="bid" then
 		toLog(log,"New bid order. Cur_status="..watch_list.status_bid.." LastTransID="..watch_list.trans_bid)
-		if watch_list.trans_bid==order.trans_id or watch_list.trans_bid==0 then
+		if watch_list.trans_bid==order.trans_id --[[or watch_list.trans_bid==0]] then
 			watch_list.order_bid={}
 			watch_list.order_bid=order
 			watch_list.status_bid=string.gsub(watch_list.status_bid,"wait","")
@@ -259,7 +265,8 @@ function OnOrderDo(order)
 			if order.trans_id~=watch_list.trans_bid and watch_list.trans_bid~=0 then
 				toLog(log,"Warning! Exess transaction sended ID="..watch_list.trans_bid)
 				bad_transactions[watch_list.trans_bid]=watch_list.status_bid
-				watch_list.trans_bid=0
+				--watch_list.trans_bid=0
+				watch_list.trans_bid=order.trans_id
 				watch_list.order_bid={}
 				watch_list.order_bid=order
 				watch_list.status_bid=string.gsub(watch_list.status_bid,"wait","")
@@ -277,14 +284,14 @@ function OnOrderDo(order)
 				watch_list.status_bid=""
 			end
 		end
-		if order.trans_id==watch_list.trans_bid then watch_list.trans_bid=0 end
+		--if order.trans_id==watch_list.trans_bid then watch_list.trans_bid=0 end
 		if orderflags2table(order.flags).cancelled==1 then 
 			transactions[order.trans_id]=""
-			if watch_list.status_bid=="" then watch_list.trans_bid=0 toLog(log,"Bid order cancelled") watch_list.order_bid={} end
+			if watch_list.status_bid=="" then --[[watch_list.trans_bid=0]] toLog(log,"Bid order cancelled") watch_list.order_bid={} end
 		end
 	elseif transactions[order.trans_id]=="offer" then
 		toLog(log,"New offer order. Cur_status="..watch_list.status_offer.." LastTransID="..watch_list.trans_offer)
-		if watch_list.trans_offer==order.trans_id or watch_list.trans_offer==0 then
+		if watch_list.trans_offer==order.trans_id --[[or watch_list.trans_offer==0]] then
 			watch_list.order_offer={}
 			watch_list.order_offer=order
 			watch_list.status_offer=string.gsub(watch_list.status_offer,"wait","")
@@ -295,7 +302,8 @@ function OnOrderDo(order)
 			if order.trans_id~=watch_list.trans_offer and watch_list.trans_offer~=0 then
 				toLog(log,"Warning! Exess transaction sended ID="..watch_list.trans_offer)
 				bad_transactions[watch_list.trans_offer]=watch_list.status_offer
-				watch_list.trans_offer=0
+				--watch_list.trans_offer=0
+				watch_list.trans_offer=order.trans_id
 				watch_list.order_offer={}
 				watch_list.order_offer=order
 				watch_list.status_offer=string.gsub(watch_list.status_offer,"wait","")
@@ -313,16 +321,17 @@ function OnOrderDo(order)
 				watch_list.status_offer=""
 			end
 		end
-		if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
+		--if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
 		if orderflags2table(order.flags).cancelled==1 then 
-			transactions[order.trans_id]=""
-			if watch_list.status_offer=="" then watch_list.trans_offer=0 toLog(log,"Offer order cancelled") watch_list.order_offer={} end
+			--transactions[order.trans_id]=""
+			if watch_list.status_offer=="" then --[[watch_list.trans_offer=0]] toLog(log,"Offer order cancelled") watch_list.order_offer={} end
 		end
 	else
 		toLog(log,"____ some shit on OnOrder()_____")
 		toLog(log,order)
 		toLog(log,"________________________________")
 	end
+	toLog(log,"Final BidStatus="..watch_list.status_bid.." OfferStatus="..watch_list.status_offer)
 	toLog(log,"OnOrder end. "..(os.clock()-st))
 end
 function OnAllTradeDo(trade)
@@ -343,7 +352,7 @@ function OnAllTradeDo(trade)
 		local bask=tonumber(getParamEx(watch_list.class,trade.seccode,"OFFER").param_value)
 		if beg==0 then
 			toLog(log,"No begemots. BOffer="..bask.." OrderPrice="..watch_list.order_bid.price)
-			if bask-watch_list.minstep~=watch_list.order_bid.price then 
+			if bask<watch_list.order_bid.price then 
 				local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(trade.seccode,bask-watch_list.minstep))
 				if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
 				toLog(log,ms)
@@ -360,13 +369,13 @@ function OnAllTradeDo(trade)
 		end
 	end
 	if watch_list.status_offer=="close" and trade.price>watch_list.open_price_offer then
-		toLog(log,"Trade lower then offer open price. Trade="..trade.price.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
+		toLog(log,"Trade upper then offer open price. Trade="..trade.price.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
 		local ql2=getQuoteLevel2(trade.class_code,trade.seccode)
 		local beg=findBegemot("offer",ql2.offer,ql2.offer_count,trade.seccode)
 		local bbid=tonumber(getParamEx(watch_list.class,trade.seccode,"BID").param_value)
 		if beg==0 then
 			toLog(log,"No begemots. BBid="..bbid.." OrderPrice="..watch_list.order_offer.price)
-			if bbid+watch_list.minstep~=watch_list.order_bid.price then 
+			if bbid>watch_list.order_offer.price then 
 				local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(trade.seccode,bbid+watch_list.minstep))
 				if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
 				toLog(log,ms)

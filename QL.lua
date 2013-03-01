@@ -36,17 +36,19 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["QUANTITY"]=tostring(volume),
+		["QUANTITY"]=string.format("%d",tostring(volume)),
 		["PRICE"]=price,
 		["ACCOUNT"]=tostring(account)
 	}
-	if comment~=nil then
-		transaction.comment=tostring(comment)
-	end
 	if client_code==nil then
 		transaction.client_code=tostring(account)
 	else
 		transaction.client_code=tostring(client_code)
+	end
+	if comment~=nil then
+		transaction.comment=tostring(comment)
+		-- test
+		transaction.client_code=string.sub(transaction.client_code..'/'..comment,0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -77,7 +79,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["TYPE"]="M",
-		["QUANTITY"]=tostring(volume),
+		["QUANTITY"]=string.format("%d",tostring(volume)),
 		["ACCOUNT"]=account
 	}
 	if comment~=nil then
@@ -90,9 +92,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	end
 	if string.find(FUT_OPT_CLASSES,class)~=nil then
 		if direction=="B" then
-			transaction.price=getParamEx(class,security,"PRICEMAX").param_image
+			transaction.price=string.gsub(getParamEx(class,security,"PRICEMAX").param_image,"%s","")
 		else
-			transaction.price=getParamEx(class,security,"PRICEMIN").param_image
+			transaction.price=string.gsub(getParamEx(class,security,"PRICEMIN").param_image,"%s","")
 		end
 	else
 		transaction.price="0"
@@ -133,7 +135,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	end
 	local forder=getRowFromTable("orders","ordernum",fo_number)
 	if forder==nil then
-		return nil,"QL.moveOrderFO(): Can`t find ordernumber="..fo_number.." in orders table!"
+		return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..fo_number.." in orders table!"
 	end
 	if (orderflags2table(forder.flags).cancelled==1 or (orderflags2table(forder.flags).done==1 and forder.balance==0)) then
 		return nil,"QL.moveOrderSpot(): Can`t move cancelled or done order!"
@@ -147,7 +149,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
 			_,ms=killOrder(so_number,sorder.seccode,sorder.class_code)
 			--toLog("ko.txt",ms)
@@ -175,7 +177,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
@@ -199,7 +201,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		if so_number~=nil and so_p~=nil and so_q~=nil then
 			local sorder=getRowFromTable("orders","ordernum",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderFO(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
 			end
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
@@ -538,7 +540,7 @@ function orderflags2table(flags)
 	if bit_set(flags,1) then
 		t.cancelled=1
 	else
-		if t.active==0 then t.done=0 else t.done=0 end
+		if t.active==0 then t.done=1 else t.done=0 end
 		t.cancelled=0
 	end
 	if bit_set(flags, 2) then
