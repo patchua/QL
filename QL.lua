@@ -1,4 +1,4 @@
--- Version 0.3
+-- Version 0.3.1
 --[[
 	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
 	Изменили количество входных параметров в toPrice. Добавили функцию getRowFromTable. Изменили исходящие пароаметры sendLimit, sendMarket, sendRPS, sendReportOnRPS
@@ -292,7 +292,7 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if res~="" then
 		return nil, "QL.moveOrderFO():"..res
 	else
-		return trans_id, "QL.moveOrderFO(): Market order sended sucesfully. Mode="..mode.." FONumber="..fo_number.." FOPrice="..fo_p
+		return trans_id, "QL.moveOrderFO(): Move order sended sucesfully. Mode="..mode.." FONumber="..fo_number.." FOPrice="..fo_p
 	end
 end
 function sendRPS(class,security,direction,price,volume,account,client_code,partner)
@@ -374,6 +374,7 @@ function killOrder(orderkey,security,class)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
 		local order=getRowFromTable("orders","ordernum",orderkey)
+		if order==nil then return nil,"QL.killOrder(): Can`t kill order. No such order in Orders table." end
 		transaction.classcode=order.class_code
 		transaction.seccode=order.seccode
 	elseif	security~=nil then
@@ -536,11 +537,8 @@ function orderflags2table(flags)
 	end
 	if bit_set(flags,1) then
 		t.cancelled=1
-	elseif t.active==1 then
-		t.done=1
-		t.cancelled=0
 	else
-		t.done=0
+		if t.active==0 then t.done=0 else t.done=0 end
 		t.cancelled=0
 	end
 	if bit_set(flags, 2) then
