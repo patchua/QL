@@ -47,8 +47,10 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
-		-- test
-		transaction.client_code=string.sub(transaction.client_code..'/'..comment,0,20)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL'..comment,0,20) end
+	else
+		transaction.comment=tostring(comment)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -82,9 +84,6 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		["QUANTITY"]=string.format("%d",tostring(volume)),
 		["ACCOUNT"]=account
 	}
-	if comment~=nil then
-		transaction.comment=comment
-	end
 	if client_code==nil then
 		transaction.client_code=account
 	else
@@ -98,6 +97,13 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		end
 	else
 		transaction.price="0"
+	end
+	if comment~=nil then
+		transaction.comment=tostring(comment)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL'..comment,0,20) end
+	else
+		transaction.comment=tostring(comment)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then

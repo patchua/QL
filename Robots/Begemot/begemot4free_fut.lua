@@ -119,10 +119,15 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,soffer,sec_code)
 	-- если стоим на закрытие и бегемота нет и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
 	elseif watch_list.status_bid=="close" and watch_list.order_bid.price<soffer-watch_list.minstep then
 		toLog(log,"BId. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
-		trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
+		local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
 		toLog(log,ms)
-		
+	elseif watch_list.status_bid=="close" and boffer<watch_list.order_bid.price and watch_list.order_bid.price-watch_list.open_price_bid>watch_list.tp*watch_list.minstep then
+		toLog(log,"Bid. Стоим на закрытие на уровне лучше чем тейк-профит и перед нами появилась заявка - передвигаемся")
+		local price=math.max(watch_list.open_price_bid+watch_list.tp*watch_list.minstep,boffer-watch_list.minstep)
+		local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,price))
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+		toLog(log,ms)	
 		-- приводит к лишним сделкам при закрытии 
 	end
 	--toLog(log,"TradeBid ended. "..(os.clock()-st))
@@ -160,7 +165,12 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,sbid,code)
 		trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(code,sbid+watch_list.minstep))
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
 		toLog(log,ms)
-	-- приводит к лишним сделкам при закрытии 
+	elseif watch_list.status_offer=="close" and bbid>watch_list.order_offer.price and watch_list.open_price_offer-watch_list.order_offer.price>watch_list.tp*watch_list.minstep then
+		toLog(log,"Offer. Стоим на закрытие на уровне лучше чем тейк-профит и перед нами появилась заявка - передвигаемся")
+		local price=math.max(watch_list.open_price_offer-watch_list.tp*watch_list.minstep,bbid+watch_list.minstep)
+		local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,price))
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+		toLog(log,ms) 
 	end
 	--toLog(log,"Trade Offer ended. "..(os.clock()-st))
 end
@@ -345,7 +355,7 @@ function OnAllTradeDo(trade)
 	if trade==nil then toLog(log,"-------------------Nil trade at OnAllTradesDo()") return end
 	if trade.price==nil then toLog(log,"---------Nil Trade.price ") toLog(log,trade) return end
 	--
-	if watch_list.status_bid=="close" and trade.price<watch_list.open_price_bid then
+	if watch_list.status_bid=="close" and trade.price<watch_list.open_price_bid-watch_list.minstep then
 		toLog(log,"Trade lower then bid open price. Trade="..trade.price.." OpenPrice="..watch_list.open_price_bid.." S="..watch_list.status_bid)
 		local ql2=getQuoteLevel2(trade.class_code,trade.seccode)
 		local beg=findBegemot("bid",ql2.bid,ql2.bid_count,trade.seccode)
@@ -368,7 +378,7 @@ function OnAllTradeDo(trade)
 			end
 		end
 	end
-	if watch_list.status_offer=="close" and trade.price>watch_list.open_price_offer then
+	if watch_list.status_offer=="close" and trade.price>watch_list.open_price_offer+watch_list.minstep then
 		toLog(log,"Trade upper then offer open price. Trade="..trade.price.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
 		local ql2=getQuoteLevel2(trade.class_code,trade.seccode)
 		local beg=findBegemot("offer",ql2.offer,ql2.offer_count,trade.seccode)
