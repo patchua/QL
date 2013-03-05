@@ -336,12 +336,12 @@ function OnOrder(order)
 		toLog(log,"Bad transaction arrived ID="..order.trans_id.." Status="..bad_transactions[order.trans_id])
 		toLog(log,order)
 		toLog(log,orderflags2table(order.flags))
-		if orderflags2table(order.flags).active==1 then
+		if orderflags2table(order.flags).active then
 			local tr,ms=killOrder(order.ordernum,order.seccode,order.class_code)
 			if tr~=nil then bad_transactions[tr]="cancell"..bad_transactions[order.trans_id] end
 			toLog(log,ms)
 		end
-		if orderflags2table(order.flags).done==1 then toLog(log,"ERROR! Exess transaction done") end
+		if orderflags2table(order.flags).done then toLog(log,"ERROR! Exess transaction done") end
 		-- do smthng with done orders
 		bad_transactions[order.trans_id]=""
 	end

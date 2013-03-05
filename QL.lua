@@ -1,7 +1,11 @@
--- Version 0.3.1
+-- Version 0.4.0
 --[[
 	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
-	Изменили количество входных параметров в toPrice. Добавили функцию getRowFromTable. Изменили исходящие пароаметры sendLimit, sendMarket, sendRPS, sendReportOnRPS
+	Изменили количество входных параметров в toPrice. Добавили функцию getRowFromTable. Изменили исходящие параметры sendLimit, sendMarket, sendRPS, sendReportOnRPS
+]]--
+--[[
+	ДОбавили killStopOrder,killAllStopOrders,stoporderflags2table,stoporderextflags2table, sendStop
+	Изменили - тип значения для ключей таблицы возвращаемой orderflags2table, типерь boolean(true\false)
 ]]--
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -37,7 +41,7 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["QUANTITY"]=string.format("%d",tostring(volume)),
-		["PRICE"]=price,
+		["PRICE"]=toPrice(security,price),
 		["ACCOUNT"]=tostring(account)
 	}
 	if client_code==nil then
@@ -47,10 +51,10 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL'..comment,0,20) end
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
 	else
 		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL',0,20) end
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -112,6 +116,60 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		return trans_id, "QL.sendMarket(): Market order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
+function sendStop(class,security,direction,stopprice,dealprice,volume,account,exp_date,client_code,comment)
+	-- отправка простой стоп-заявки
+	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
+	-- если код клиента нил - подлставляем счет
+	-- если время жизни не указано - то заявка "До Отмены"
+	-- Данная функция возвращает 2 параметра 
+	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
+	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
+	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
+		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
+	local trans_id=math.random(2000000000)
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="NEW_STOP_ORDER",
+		["CLASSCODE"]=class,
+		["SECCODE"]=security,
+		["OPERATION"]=direction,
+		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["STOPPRICE"]=toPrice(security,stopprice),
+		["PRICE"]=toPrice(security,dealprice),
+		["ACCOUNT"]=tostring(account)
+	}
+	if client_code==nil then
+		transaction.client_code=tostring(account)
+	else
+		transaction.client_code=tostring(client_code)
+	end
+	if exp_date==nil then
+		transaction["EXPIRY_DATE"]="GTC"
+	else
+		trnsaction['EXPIRY_DATE']=exp_date
+	end
+	if comment~=nil then
+		transaction.comment=tostring(comment)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
+	else
+		transaction.comment=tostring(comment)
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
+	end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil, "QL.sendStop():"..res
+	else
+		return trans_id, "QL.sendStop(): Stop-order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." StopPrice="..stopprice.." DealPrice="..dealprice.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+	end
+end
+function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoffset,defspread,exp_date,account,clientcode)
+	
+end
 function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	-- перемещение заявки
 	-- минимальный набор параметров mode,fo_number,fo_p
@@ -143,7 +201,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if forder==nil then
 		return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..fo_number.." in orders table!"
 	end
-	if (orderflags2table(forder.flags).cancelled==1 or (orderflags2table(forder.flags).done==1 and forder.balance==0)) then
+	if (orderflags2table(forder.flags).cancelled or (orderflags2table(forder.flags).done and forder.balance==0)) then
 		return nil,"QL.moveOrderSpot(): Can`t move cancelled or done order!"
 	end
 	if mode==0 then
@@ -397,7 +455,46 @@ function killOrder(orderkey,security,class)
 	if res~="" then
 		return nil,"QL.killOrder(): "..res
 	else
-		return trans_id,"QL.killOrder(): Limit order kill sended. MAY NOT KILL!!! Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
+		return trans_id,"QL.killOrder(): Limit order kill sended. Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
+	end
+end
+function killStopOrder(orderkey,security,class)
+	-- функция отмены стоп-заявки по номеру
+	-- принимает минимум 1 парамер
+	-- ВАЖНО! Данная функция не гарантирует снятие заявки
+	-- Возвращает сообщение сервера в случае ошибки выявленной сервером Квик либо строку с информацией о транзакции
+	if orderkey==nil or tonumber(orderkey)==0 then
+		return nil,"QL.killStopOrder(): Can`t kill order. OrderKey nil or zero"
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
+	local trans_id=math.random(2000000000)
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="KILL_STOP_ORDER",
+		["ORDER_KEY"]=tostring(orderkey)
+	}
+	if (security==nil and class==nil) or (class~=nil and security==nil) then
+		local order=getRowFromTable("stop_orders","ordernum",orderkey)
+		if order==nil then return nil,"QL.killStopOrder(): Can`t kill order. No such order in StopOrders table." end
+		transaction.classcode=order.class_code
+		transaction.seccode=order.seccode
+	elseif	security~=nil then
+		transaction.seccode=security
+		transaction.classcode=getSecurityInfo("",security).class_code
+	else
+		transaction.seccode=security
+		transaction.classcode=class 
+	end
+	--toLog("ko.txt",transaction)
+	if string.find(FUT_OPT_CLASSES,transaction.classcode)~=nil then transaction['BASE_CONTRACT']=getParamEx(transaction.classcode,transaction.seccode,'optionbase').param_image end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil,"QL.killStopOrder(): "..res
+	else
+		return trans_id,"QL.killStopOrder(): Stop-order kill sended. Class="..transaction.classcode.." Sec="..transaction.seccode.." Key="..orderkey.." Trans_id="..trans_id
 	end
 end
 function killAllOrders(table_mask)
@@ -412,7 +509,7 @@ function killAllOrders(table_mask)
 		row=getItem("orders",i)
 		tokill=false
 		--toLog(log,"Row "..i.." onum="..row.ordernum)
-		if orderflags2table(row.flags).active==1 then
+		if orderflags2table(row.flags).active then
 			tokill=true
 			--toLog(log,"acitve")
 			if table_mask~=nil then
@@ -440,6 +537,47 @@ function killAllOrders(table_mask)
 		end
 	end
 	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
+end
+function killAllStopOrders(table_mask)
+	-- данная функция отправит транзакции на отмену АКТИВНЫХ стоп-заявок соответствующим фильтру указанному как входящий параметр table_mask
+	-- список всех возможных параметров  : ACCOUNT,CLASSCODE,SECCODE,OPERATION,CLIENT_CODE,COMMENT
+	-- если вызвать функцию с параметром nil - снимутся ВСЕ активные заявки
+	local i,key,val,result_num=0,0,0,0
+	local tokill=true
+	local row={}
+	local result_str=""
+	for i=0,getNumberOf("stop_orders"),1 do
+		row=getItem("stop_orders",i)
+		tokill=false
+		--toLog(log,"Row "..i.." onum="..row.ordernum)
+		if stoporderflags2table(row.flags).active then
+			tokill=true
+			--toLog(log,"acitve")
+			if table_mask~=nil then
+				for key,val in pairs(table_mask) do
+					--toLog(log,"check key="..key.." val="..val)
+					--toLog(log,"strlowe="..string.lower(key).." row="..row[string.lower(key)].." tbl="..val)
+					if row[string.lower(key)]~=val then
+						tokill=false
+						--toLog(log,"false cond. t="..table_mask.key.." row="..row[string.lower(key)])
+						break
+					end
+				end
+			end
+		end
+		if tokill then
+			--toLog(log,"kill onum"..row.ordernum)
+			res,ms=killStopOrder(tostring(row.ordernum),row.seccode,row.class_code)
+			result_num=result_num+1
+			--toLog(log,ms)
+			if res then
+				result_str=result_str..row.ordernum..","
+			else
+				result_str=result_str.."!"..row.ordernum..","
+			end
+		end
+	end
+	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
 end
 function getPosition(security)
     --возвращает чистую позицию по инструменту
@@ -536,32 +674,78 @@ function getPosFromTable(table,value)
 end
 function orderflags2table(flags)
 	-- фнукция возвращает таблицу с полным описанием заявки по флагам
-	-- Атрибуты : active, cancelled, done,operation("B" for Buy, "S" for Sell),limit(1 - limit order, 0 - market order)
+	--[[ Атрибуты : 
+	active, cancelled, done,operation("B" for Buy, "S" for Sell),limit(true - limit order, false - market order),
+	mte(Возможно исполнение заявки несколькими сделками),fill_or_kill(Исполнить заявку немедленно или снять),
+	mmorder(Заявка маркет-мейкера. Для адресных заявок –заявка отправлена контрагенту),received(Для адресных заявок –заявка получена от контрагента),
+	cancell_rest(Снять остаток),iceberg
+	]]
 	local t={}
-	if bit_set(flags, 0) then
-		t.active=1
-	else
-		t.active = 0
+	if bit_set(flags, 0) then t.active=true	else t.active = false end
+	if bit_set(flags,1) then t.cancelled=true 
+	else	
+		if not t.active then t.done=true else t.done=false end
+		t.cancelled=false
 	end
-	if bit_set(flags,1) then
-		t.cancelled=1
-	else
-		if t.active==0 then t.done=1 else t.done=0 end
-		t.cancelled=0
+	if bit_set(flags, 2) then t.operation="S" else t.operation = "B" end
+	if bit_set(flags, 3) then t.limit=true else t.limit = false end
+	if bit_set(flags,4) then t.mte=true	else t.mte=false end
+	if bit_set(flags,5) then t.fill_or_kill=true else t.fill_or_kill=false end
+	if bit_set(flags,6) then t.mmorder=true else t.mmorder=false end
+	if bit_set(flags,7) then t.received=true else t.received=false end
+	if bit_set(flags,8) then t.cancell_rest=true else t.cancell_rest=false end
+	if bit_set(flags,9) then t.iceberg=true else t.iceberg=false end
+	if t.cancelled and t.done then message("Erorr in orderflags2table order cancelled and done!",2)	end
+	return t
+end
+function stoporderflags2table(flags)
+	-- фнукция возвращает таблицу с полным описанием стоп-заявки по флагам
+	--[[ Атрибуты : 
+	active, cancelled, done,operation("B" for Buy, "S" for Sell),limit(true - limit order, false - market order),
+	mte(Возможно исполнение заявки несколькими сделками),wait_activation(Стоп-заявка ожидает активации),
+	another_server(Стоп-заявка с другого сервера),tplopf(Устанавливается в случае стоп-заявки типа тейк-профита по заявке, в случае когда исходная заявка частично исполнена и по выставленной тейк-профит заявке на исполненную часть заявки выполнилось условие активации),
+	manually_activated(Стоп-заявка активирована вручную),rejected(Стоп-заявка сработала, но была отвергнута торговой системой),
+	rejected_limits(Стоп-заявка сработала, но не прошла контроль лимитов),cdtloc(Стоп-заявка снята, так как снята связанная заявка),
+	cdtloe(Стоп-заявка снята, так как связанная заявка исполнена),minmaxcalc(Идет расчет минимума-максимума)
+	]]
+	local t={}
+	if bit_set(flags, 0) then t.active=true	else t.active = false end
+	if bit_set(flags,1) then t.cancelled=true 
+	else	
+		if not t.active then t.done=true else t.done=false end
+		t.cancelled=false
 	end
-	if bit_set(flags, 2) then
-		t.operation="S"
-	else
-		t.operation = "B"
-	end
-	if bit_set(flags, 3) then
-		t.limit=1
-	else
-		t.limit = 0
-	end
-	if t.cancelled==1 and t.done==1 then
-		message("Erorr in orderflags2table order cancelled and done!",2)
-	end
+	if bit_set(flags, 2) then t.operation="S" else t.operation = "B" end
+	if bit_set(flags, 3) then t.limit=true else t.limit = false end
+	if bit_set(flags,5) then t.wait_activation=true else t.wait_activation=false end
+	if bit_set(flags,6) then t.another_server=true else t.another_server=false end
+	if bit_set(flags,8) then t.tplopf=true else t.tplopf=false end
+	if bit_set(flags,9) then t.manually_activated=true else t.manually_activated=false end
+	if bit_set(flags,10) then t.rejected=true else t.rejected=false end
+	if bit_set(flags,11) then t.rejected_limits=true else t.rejected_limits=false end
+	if bit_set(flags,12) then t.cdtloc=true else t.cdtlo=false end
+	if bit_set(flags,13) then t.cdtloe=true else t.cdtloe=false end
+	if bit_set(flags,15) then t.minmaxcalc=true else t.minmaxcalc=false end
+	return t
+end
+function stoporderextflags2table(flags)
+	-- фнукция возвращает таблицу с дополнительнім описанием стоп-заявки по флагам
+	--[[ Атрибуты : 
+	userest(Использовать остаток основной заявки), cpf(При частичном исполнении заявки снять стоп-заявку), asolopf(Активировать стоп-заявку при частичном исполнении связанной заявки),
+	percent(Отступ задан в процентах, иначе – в пунктах цены),defpercent(Защитный спред задан в процентах, иначе – в пунктах цены),
+	this_day(Срок действия стоп-заявки ограничен сегодняшним днем),interval(Установлен интервал времени действия стоп-заявки),
+	markettp(Выполнение тейк-профита по рыночной цене),marketstop(Выполнение стоп-заявки по рыночной цене),
+	]]
+	local t={}
+	if bit_set(flags, 0) then t.userest=true else t.userest = false end
+	if bit_set(flags,1) then t.cpf=true t.cpf=false	end
+	if bit_set(flags, 2) then t.asolopf=true else t.asolopf =false end
+	if bit_set(flags, 3) then t.percent=true else t.percent = false end
+	if bit_set(flags,4) then t.defpercent=true else t.defpercent=false end
+	if bit_set(flags,5) then t.this_day=true else t.this_day=false end
+	if bit_set(flags,6) then t.interval=true else t.interval=false end
+	if bit_set(flags,7) then t.markettp=true else t.markettp=false end
+	if bit_set(flags,8) then t.marketstop=true else t.marketstop=false end
 	return t
 end
 function bit_set( flags, index )

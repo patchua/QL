@@ -253,7 +253,7 @@ end
 function OnOrderDo(order)
 	local st=os.clock()
 	if order==nil then toLog(log,"Nil order") return end
-	toLog(log,"OnOrder start. TrId="..order.trans_id.." Num="..order.ordernum.." Status="..orderflags2table(order.flags).active)
+	toLog(log,"OnOrder start. TrId="..order.trans_id.." Num="..order.ordernum.." Status="..tostring(orderflags2table(order.flags).active))
 	if watch_list.order_bid.ordernum~=nil then
 		toLog(log,"Bid status="..watch_list.status_bid.." OrderNum="..watch_list.order_bid.ordernum)
 	else
@@ -268,12 +268,12 @@ function OnOrderDo(order)
 		toLog(log,"Bad transaction arrived ID="..order.trans_id.." Status="..bad_transactions[order.trans_id])
 		toLog(log,order)
 		toLog(log,orderflags2table(order.flags))
-		if orderflags2table(order.flags).active==1 then
+		if orderflags2table(order.flags).active then
 			local tr,ms=killOrder(order.ordernum,order.seccode,order.class_code)
 			if tr~=nil then bad_transactions[tr]="cancell"..bad_transactions[order.trans_id] end
 			toLog(log,ms)
 		end
-		if orderflags2table(order.flags).done==1 then toLog(log,"ERROR! Exess transaction done") end
+		if orderflags2table(order.flags).done then toLog(log,"ERROR! Exess transaction done") end
 		-- do smthng with done orders
 		bad_transactions[order.trans_id]=""
 	end
@@ -311,7 +311,7 @@ function OnOrderDo(order)
 			end
 		end
 		--if order.trans_id==watch_list.trans_bid then watch_list.trans_bid=0 end
-		if orderflags2table(order.flags).cancelled==1 then 
+		if orderflags2table(order.flags).cancelled then 
 			transactions[order.trans_id]=""
 			if watch_list.status_bid=="" then --[[watch_list.trans_bid=0]] toLog(log,"Bid order cancelled") watch_list.order_bid={} end
 			if watch_list.status_bid=="cancellopen" then watch_list.status_bid=string.gsub(watch_list.status_bid,"cancell","") toLog(log,"Open bid order cancelled. Try to set new.") OnQuoteDo(order.class_code,order.seccode) end
@@ -356,7 +356,7 @@ function OnOrderDo(order)
 			end
 		end
 		--if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
-		if orderflags2table(order.flags).cancelled==1 then 
+		if orderflags2table(order.flags).cancelled then 
 			--transactions[order.trans_id]=""
 			if watch_list.status_offer=="" then --[[watch_list.trans_offer=0]] toLog(log,"Offer order cancelled") watch_list.order_offer={} end
 			if watch_list.status_offer=="cancellopen" then watch_list.status_offer=string.gsub(watch_list.status_offer,"cancell","") toLog(log,"Open offer order cancelled. Try to set new.") OnQuoteDo(order.class_code,order.seccode) end
