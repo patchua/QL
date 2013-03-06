@@ -1,4 +1,5 @@
--- Version 0.4.0
+-- Version 0.4.1
+-- По всем вопросам можно писать тут - forum.qlua.org
 --[[
 	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
 	Изменили количество входных параметров в toPrice. Добавили функцию getRowFromTable. Изменили исходящие параметры sendLimit, sendMarket, sendRPS, sendReportOnRPS
@@ -18,7 +19,7 @@ NOTRANDOMIZED=true
 --[[
 Trading Module
 ]]--
-function sendLimit(class,security,direction,price,volume,account,client_code,comment)
+function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition)
 	-- отправка лимитированной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
 	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
@@ -49,6 +50,7 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	else
 		transaction.client_code=tostring(client_code)
 	end
+	if execution_condition~=nil then transaction["EXECUTION_CONDITION"]=string.upper(tostring(execution_condition)) end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
 		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
@@ -151,7 +153,7 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 	if exp_date==nil then
 		transaction["EXPIRY_DATE"]="GTC"
 	else
-		trnsaction['EXPIRY_DATE']=exp_date
+		transaction['EXPIRY_DATE']=exp_date
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
