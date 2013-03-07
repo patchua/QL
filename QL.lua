@@ -97,9 +97,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	end
 	if string.find(FUT_OPT_CLASSES,class)~=nil then
 		if direction=="B" then
-			transaction.price=string.gsub(getParamEx(class,security,"PRICEMAX").param_image,"%s","")
+			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMAX").param_value)
 		else
-			transaction.price=string.gsub(getParamEx(class,security,"PRICEMIN").param_image,"%s","")
+			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMIN").param_value)
 		end
 	else
 		transaction.price="0"
@@ -476,7 +476,7 @@ function killStopOrder(orderkey,security,class)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="KILL_STOP_ORDER",
-		["ORDER_KEY"]=tostring(orderkey)
+		["STOP_ORDER_KEY"]=tostring(orderkey)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
 		local order=getRowFromTable("stop_orders","ordernum",orderkey)
@@ -658,7 +658,7 @@ function toPrice(security,value)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
 	local scale=getParamEx(getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
-	return string.format("%."..string.format("%d",scale).."f",value)
+	return string.format("%."..string.format("%d",scale).."f",tonumber(value))
 end
 function getPosFromTable(table,value)
 	-- Возвращает ключ значения value из таблицы table, иначе -1

@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.3
+Version 0.4.1
 
 1. function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition)
 -- отправка лимитированной заявки
