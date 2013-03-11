@@ -826,3 +826,25 @@ function HiResTimer()
 	local c1=qpc()
 	return (c1-c0)/f0
 end
+function getSTime()
+	--возвращает время сервера в виде числа
+	-- при вызове без параметров - текущее, при вызове с параметрами текущее минус amount таймфреймов timeframe
+	local t = ""
+	local a = tostring(getInfoParam("SERVERTIME"))
+	for s in a:gmatch('%d+') do
+		t=t..s
+	end
+	return tonumber(t)
+end
+function isTradeTime(exchange, shift)
+	--возвращает true если текущее серверное время является торговым для биржи exchange и false если нет (клиринг, нет торгов)
+	-- возможные вариант бирж - UX,MICEX,FORTS
+	-- в параметре shift следует указать сдвиг времени сервера брокера относительно времени бирж MICEX,FORTS (сервера размещены в Украине например)
+	if exchange==nil then return false end
+	local time=getSTime()
+	local sp=0
+	if shift~=nil then sp=tonumber(shift) end
+	if (exchange=='UX' or exchange=='MICEX') and time+sp>103000 and time+sp<173000 then return true else return false end
+	if exchange=='FORTS' and ((time+sp>100000 and time+sp<140000) or (time+sp>140300 and time+sp<184500) or (time+sp>190000 and time+sp<235000)) then return true else return false end
+	return false
+end
