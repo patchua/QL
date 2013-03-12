@@ -388,7 +388,7 @@ function OnAllTradeDo(trade)
 	-- check bad data
 	if watch_list.status_bid=="close" and trade<watch_list.open_price_bid-watch_list.minstep then
 		toLog(log,"Bid. Сделка ниже цены открытия. Trade="..trade.." OpenPrice="..watch_list.open_price_bid.." S="..watch_list.status_bid)
-		local pr=FindBidClosePrice(watch_list.code,watch_list.open_price_bid)
+		local pr=tonumber(FindBidClosePrice(watch_list.code,watch_list.open_price_bid))
 		if pr~=watch_list.order_bid.price and pr+watch_list.minstep~=watch_list.order_bid.price then
 			toLog(log,"Bid. Необходимо передвинуть заявку. CurPrice="..watch_list.order_bid.price.." CalculatedPrice="..pr)
 			local trid,ms=killOrder(watch_list.order_bid.ordernum,watch_list.code,watch_list.class)
@@ -398,7 +398,7 @@ function OnAllTradeDo(trade)
 	end
 	if watch_list.status_offer=="close" and trade>watch_list.open_price_offer+watch_list.minstep then
 		toLog(log,"Offer. Сделка выше цены открытия. Trade="..trade.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
-		local pr=FindOfferClosePrice(security,watch_list.open_price_offer)
+		local pr=tonumber(FindOfferClosePrice(watch_list.code,watch_list.open_price_offer))
 		if pr~=watch_list.order_offer.price and pr-watch_list.minstep~=watch_list.order_offer.price then
 			toLog(log,"Offer. Необходимо передвинуть заявку. CurPrice="..watch_list.order_offer.price.." CalculatedPrice="..pr)
 			local trid,ms=killOrder(watch_list.order_offer.ordernum,watch_list.code,watch_list.class)
