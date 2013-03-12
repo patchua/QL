@@ -53,9 +53,9 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	if execution_condition~=nil then transaction["EXECUTION_CONDITION"]=string.upper(tostring(execution_condition)) end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
+		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//'..comment,0,20) end
 	else
-		transaction.comment=tostring(comment)
+		transaction.comment=tostring('QL')
 		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
 	end
 	local res=sendTransaction(transaction)

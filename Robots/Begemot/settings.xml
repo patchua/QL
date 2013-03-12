@@ -7,9 +7,8 @@
   <clc value="SPBFUT00854" />
   <account value="SPBFUT00854" />
   <takeprofit value="5" />
-  <bidEnable value="0" />
+  <bidEnable value="1" />
   <askEnable value="1" />
-  <security value="VBH3" />
-  <class value="SPBFUT" />
+  <security value="LKH3" />
 <volume value="1"/>
 </table>
