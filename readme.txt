@@ -1,9 +1,11 @@
 ﻿QL Library 
-Version 0.4.1
+Version 0.4.3
 
-1. function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition)
+1. function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expite_date)
 -- отправка лимитированной заявки
 -- все параметры кроме кода клиента и коментария должны быть не нил
+-- execution_condition может принимать 2 варианта - FILL_OR_KILL(Немедленно или отклонить),KILL_BALANCE(Снять остаток). Если параметр не указан то по умолчанию Поставить в очередь. ВНИМАНИЕ! Работает ТОЛЬКО на срочном рынке!
+-- expire_date - указывается для переноса заявок на срочном рынке
 -- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
 -- если код клиента нил - подлставляем счет
 -- Данная функция возвращает 2 параметра 

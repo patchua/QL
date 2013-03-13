@@ -1,4 +1,4 @@
--- Version 0.4.1
+-- Version 0.4.3
 -- По всем вопросам можно писать тут - forum.qlua.org
 --[[
 	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
@@ -8,6 +8,11 @@
 	ДОбавили killStopOrder,killAllStopOrders,stoporderflags2table,stoporderextflags2table, sendStop
 	Изменили - тип значения для ключей таблицы возвращаемой orderflags2table, типерь boolean(true\false)
 ]]--
+--[[
+	Добавили поддержку выставления заявок с разными типами исполнения и с переносом для срочного рынка. Также поле комментарий теперь адекватно заполняется.
+	Комментарий для заявок спот рынка имеет формат код_клиента/комментарий (обрезается до 20 символов)
+]]
+
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
 require"bit"
@@ -19,7 +24,68 @@ NOTRANDOMIZED=true
 --[[
 Trading Module
 ]]--
-function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition)
+function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expire_date)
+	if string.find(FUT_OPT_CLASSES,class)~=nil then
+		sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
+	else
+		sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
+	end
+end
+function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
+	-- отправка лимитированной заявки
+	-- все параметры кроме кода клиента и коментария должны быть не нил
+	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
+	-- если код клиента нил - подлставляем счет (для спот-рынков)
+	-- execution_condition может принимать 2 варианта - FILL_OR_KILL(Немедленно или отклонить),KILL_BALANCE(Снять остаток). Если параметр не указан то по умолчанию Поставить в очередь. ВНИМАНИЕ! Работает ТОЛЬКО на срочном рынке!
+	-- expire_date - указывается для переноса заявок на срочном рынке
+	-- Данная функция возвращает 2 параметра 
+	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
+	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
+	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
+		return nil,"QL.sendLimitFO(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
+	local trans_id=math.random(2000000000)
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="Ввод заявки",
+		["CLASSCODE"]=class,
+		["Тип"]="Лимитированная",
+		["Условие исполнения"]="Поставить в очередь",
+		["Класс"]=class,
+		["Инструмент"]=security,
+		["Количество"]=string.format("%d",tostring(volume)),
+		["Цена"]=toPrice(security,price),
+		["Торговый счет"]=tostring(account)
+	}
+	if direction=='B' then transaction['К/П']='Покупка' else transaction['К/П']='Продажа' end
+	if comment~=nil then
+		transaction['Комментарий']=string.sub(tostring(comment),0,20)
+	else
+		transaction['Комментарий']='QL'
+	end
+	if expire_date~=nil then
+		transaction['Переносить заявку']='Да'
+		transaction['Дата экспирации']=tostring(expire_date)
+	end
+	if execution_condition~=nil then 
+		if string.upper(execution_condition)=='FILL_OR_KILL' then
+			transaction["Условие исполнения"]='Немедленно или отклонить'
+		elseif string.upper(execution_condition)=='KILL_BALANCE' then
+			transaction["Условие исполнения"]='Снять остаток'
+		end
+	end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil, "QL.sendLimitFO():"..res
+	else
+		return trans_id, "QL.sendLimitFO(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+	end
+end
+function sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
 	-- отправка лимитированной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
 	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
@@ -28,7 +94,7 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
-		return nil,"QL.sendLimit(): Can`t send order. Nil parameters."
+		return nil,"QL.sendLimitSpot(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
 		math.randomseed(socket.gettime())
@@ -50,19 +116,16 @@ function sendLimit(class,security,direction,price,volume,account,client_code,com
 	else
 		transaction.client_code=tostring(client_code)
 	end
-	if execution_condition~=nil then transaction["EXECUTION_CONDITION"]=string.upper(tostring(execution_condition)) end
 	if comment~=nil then
-		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//'..comment,0,20) end
+		transaction.client_code=string.sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.comment=tostring('QL')
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
+		transaction.client_code=string.sub(transaction.client_code..'/QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
-		return nil, "QL.sendLimit():"..res
+		return nil, "QL.sendLimitSpot():"..res
 	else
-		return trans_id, "QL.sendLimit(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+		return trans_id, "QL.sendLimitSpot(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
 function sendMarket(class,security,direction,volume,account,client_code,comment)
