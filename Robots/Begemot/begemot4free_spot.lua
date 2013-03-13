@@ -180,7 +180,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancellclose" end
 		toLog(log,ms)
 	end
-	--toLog(log,"Trade Offer ended. "..(os.clock()-st))
+	toLog(log,"Trade Offer ended. "..(os.clock()-st)..' status='..watch_list.status_offer)
 end
 function FindOfferClosePrice(security,price)
 	local tp_level=watch_list.tp*watch_list.minstep
@@ -301,7 +301,7 @@ function OnOrderDo(order)
 				watch_list.order_bid=order
 				watch_list.status_bid=string.gsub(watch_list.status_bid,"wait","")
 			end
-			if watch_list.status_bid=="open" or watch_list.status_bid=="" or watch_list.status_bid=="cancellopen" then
+			if watch_list.status_bid=="open" or watch_list.status_bid=="" or watch_list.status_bid=="cancell" then
 				watch_list.open_price_bid=order.price
 				local pr=FindBidClosePrice(order.seccode,order.price)
 				local trid,ms=sendLimit(order.class_code,order.seccode,"S",toPrice(order.seccode,pr),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotCB")
@@ -345,7 +345,7 @@ function OnOrderDo(order)
 				watch_list.order_offer=order
 				watch_list.status_offer=string.gsub(watch_list.status_offer,"wait","")
 			end
-			if watch_list.status_offer=="open" or watch_list.status_offer=="" or watch_list.status_offer=='cancellopen' then
+			if watch_list.status_offer=="open" or watch_list.status_offer=="" or watch_list.status_offer=='cancell' then
 				watch_list.open_price_offer=order.price
 				local pr=FindOfferClosePrice(order.seccode,order.price)
 				local trid,ms=sendLimit(order.class_code,order.seccode,"B",toPrice(order.seccode,pr),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotCO")
