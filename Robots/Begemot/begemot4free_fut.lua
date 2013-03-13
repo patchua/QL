@@ -29,7 +29,7 @@ function getSettings(path)
 	end 
 	toLog(log,"File oppened")
 	watch_list.code=file:find("security").value
-	watch_list.class=getSecurityInfo('',watch_list.code).class_cod
+	watch_list.class=getSecurityInfo('',watch_list.code).class_code
 	watch_list.volume_offer=tonumber(file:find("volume_offer").value)
 	watch_list.volume_bid=tonumber(file:find("volume_bid").value)
 	watch_list.tp=tonumber(file:find("takeprofit").value)
@@ -338,7 +338,7 @@ function OnOrderDo(order)
 end
 function OnAllTradeDo(trade)
 	local st=os.clock()
-	local s="OnAllTrade start. Price="..trade.price
+	local s="OnAllTrade start. Price="..trade
 	if watch_list.status_bid=="close" then s=s..' BidOpenPrice='..watch_list.open_price_bid end
 	if watch_list.status_offer=="close" then s=s..' OfferOpenPrice='..watch_list.open_price_offer end
 	toLog(log,s)
@@ -474,6 +474,7 @@ end
 	end
 end]]
 function OnParam(pclass,psec)
+	if not do_main or psec~=watch_list.code then return end
 	local t=tonumber(getParamEx(pclass,psec,"LAST").param_value)
 	if last_trade~=t then table.insert(on_param,t) last_trade=t end
 end

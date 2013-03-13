@@ -490,6 +490,7 @@ end
 	end
 end]]
 function OnParam(pclass,psec)
+	if not do_main or psec~=watch_list.code then retrn end
 	local t=tonumber(getParamEx(pclass,psec,"LAST").param_value)
 	if last_trade~=t then table.insert(on_param,t) last_trade=t end
 end

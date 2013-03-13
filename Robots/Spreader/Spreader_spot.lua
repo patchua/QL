@@ -75,7 +75,7 @@ function OnStop()
 end
 
 function OnQuote(pclass,psecurity)
-	if pclass~=class or psecurity~=security then return end
+	if not is_run or pclass~=class or psecurity~=security then return end
 	local qt2=getQuoteLevel2(pclass,psecurity)
 	--if new_bid==bbid and new_ask==bask then return else bbid,bask=new_bid,new_ask end
 	--toLog(log,"Param changed. BBid="..bbid.." BAsk="..bask)
@@ -305,7 +305,7 @@ function workask(quotes)
 end
 
 function OnParam(cl,sec)
-	if sec~=security then return end -- chenge after tests
+	if not is_run or sec~=security then return end 
 	--toLog(log,"New AllTrade price="..trade.price)
 	local last=tonumber(getParamEx(cl,sec,"LAST").param_value)
 	if last_trade==last then return end
@@ -320,7 +320,7 @@ function OnParam(cl,sec)
 end
 
 function OnOrder(order)
-
+	if not is_run then return end
 	if bad_transactions[order.trans_id]~="" and bad_transactions[order.trans_id]~=nil then
 		toLog(log,"Bad transaction arrived ID="..order.trans_id.." Status="..bad_transactions[order.trans_id])
 		toLog(log,order)
