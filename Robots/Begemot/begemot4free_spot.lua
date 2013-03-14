@@ -156,7 +156,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 	elseif new_begoffer~=0 and cur_begoffer~=0 and cur_begoffer~=new_begoffer and watch_list.status_offer=="open" then
 		toLog(log,"Offer. если бегемот передвинулся - передвинуть заявку. num="..watch_list.order_offer.ordernum.." pr="..toPrice(code,new_begoffer-watch_list.minstep))
 		--local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(code,new_begoffer-watch_list.minstep))
-		local tris,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
+		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancell" end
 		toLog(log,ms)
 	-- если стоим на закрытие и ниже повился бегемот - передвигаемся под него
