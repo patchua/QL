@@ -138,7 +138,7 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 	--toLog(log,"TradeBid ended. "..(os.clock()-st))
 end
 function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
-	--local st=os.clock()
+	local st=os.clock()
 	toLog(log,"Trade Offer started. CBOffer="..cur_begoffer.." NBOffer="..new_begoffer.." NBBid="..new_begbid.." BBid="..bbid.." SBid="..sbid.." Sec="..code)
 	-- если бегемот исчез и есть заявка на открытие - снять
 	if watch_list.status_offer=="open" and new_begoffer==0 then

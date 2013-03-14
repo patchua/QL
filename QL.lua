@@ -26,9 +26,9 @@ Trading Module
 ]]--
 function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expire_date)
 	if string.find(FUT_OPT_CLASSES,class)~=nil then
-		sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
+		return sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
 	else
-		sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
+		return sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
 	end
 end
 function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
