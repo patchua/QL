@@ -1,9 +1,10 @@
--- version 0.4.0
+-- version 0.4.1
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
 -- 0.3.2 bug in change orders on update
 -- 0.4 different versions for spot and fut, moved from OnAllTrade to OnParam, no class in settings
+-- 0.4.1 new rule for close orders
 require"QL"
 require"luaxml"
 log="begemot.log"
@@ -49,6 +50,8 @@ function getSettings(path)
 	watch_list.order_offer={}
 	watch_list.open_price_offer=0
 	watch_list.open_price_bid=0
+	watch_list.bad_bid=false
+	watch_list.bad_offer=false
 	watch_list.minstep=getParamEx(watch_list.class,watch_list.code,"SEC_PRICE_STEP").param_value
 	toLog(log,"Settings loaded")
 	toLog(log,watch_list)
@@ -115,7 +118,7 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitcancell" end
 		toLog(log,ms)
 	-- если стоим на закрытие и ниже повилс€ бегемот - передвигаемс€ под него
-	elseif watch_list.status_bid=="close" and new_begoffer<watch_list.order_bid.price and new_begoffer~=0 then
+	elseif watch_list.status_bid=="close" and new_begoffer<watch_list.order_bid.price and new_begoffer~=0 and (not watch_list.bad_bid) then
 		toLog(log,"BId. если стоим на закрытие и ниже повилс€ бегемот - передвигаемс€ под него")
 		--local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,new_begoffer-watch_list.minstep))
 		local trid,ms=killOrder(watch_list.order_bid.ordernum,code,watch_list.class)
@@ -130,7 +133,14 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 		toLog(log,ms)
 	elseif watch_list.status_bid=="close" and boffer<watch_list.order_bid.price and watch_list.order_bid.price-watch_list.open_price_bid>=(watch_list.tp+1)*watch_list.minstep then
 		toLog(log,"Bid. —тоим на закрытие на уровне лучше чем тейк-профит и перед нами по€вилась за€вка - передвигаемс€")
-		toLog(log,"Status="..watch_list.status_bid.." OrderPrice="..watch_list.order_bid.price.." OpenPrice="..watch_list.open_price_bid.." TP="..watch_list.tp)
+		--toLog(log,"Status="..watch_list.status_bid.." OrderPrice="..watch_list.order_bid.price.." OpenPrice="..watch_list.open_price_bid.." TP="..watch_list.tp)
+		local trid,ms=killOrder(watch_list.order_bid.ordernum,code,watch_list.class)
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitcancellclose" end
+		toLog(log,ms)
+	-- если стоим на закрытие, прошла сделка хуже и перед нами по€вилась за€вка - переставитс€
+	elseif watch_list.status_bid=='close' and watch_list.bad_bid and boffer<watch_list.order_bid.price then
+		toLog(log,"Bid. Eсли стоим на закрытие, прошла сделка хуже и перед нами по€вилась за€вка - переставитс€")
+		--toLog(log,"Status="..watch_list.status_bid.." OrderPrice="..watch_list.order_bid.price.." OpenPrice="..watch_list.open_price_bid.." TP="..watch_list.tp)
 		local trid,ms=killOrder(watch_list.order_bid.ordernum,code,watch_list.class)
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitcancellclose" end
 		toLog(log,ms)
@@ -139,7 +149,7 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 end
 function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 	local st=os.clock()
-	toLog(log,"Trade Offer started. CBOffer="..cur_begoffer.." NBOffer="..new_begoffer.." NBBid="..new_begbid.." BBid="..bbid.." SBid="..sbid.." Sec="..code)
+	toLog(log,"Trade Offer started. CBOffer="..cur_begoffer.." NBOffer="..new_begoffer.." NBBid="..new_begbid.." BBid="..bbid.." SBid="..sbid.." Sec="..code .." BadTrade="..tostring(watch_list.bad_offer))
 	-- если бегемот исчез и есть за€вка на открытие - сн€ть
 	if watch_list.status_offer=="open" and new_begoffer==0 then
 		toLog(log,"Offer. если бегемот исчез и есть за€вка на открытие - сн€ть ")
@@ -160,7 +170,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancell" end
 		toLog(log,ms)
 	-- если стоим на закрытие и ниже повилс€ бегемот - передвигаемс€ под него
-	elseif watch_list.status_offer=="close" and new_begbid>watch_list.order_offer.price and new_begbid~=0 then
+	elseif watch_list.status_offer=="close" and new_begbid>watch_list.order_offer.price and new_begbid~=0 and (not watch_list.bad_offer) then
 		toLog(log,"Offer. если стоим на закрытие и ниже повилс€ бегемот - передвигаемс€ под него")
 		--local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(code,new_begbid+watch_list.minstep))
 		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
@@ -173,9 +183,17 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancellclose" end
 		toLog(log,ms)
+	--—тоим на закрытие на уровне лучше чем тейк-профит и перед нами по€вилась за€вка - передвигаемс€
 	elseif watch_list.status_offer=="close" and bbid>watch_list.order_offer.price and watch_list.open_price_offer-watch_list.order_offer.price>=(watch_list.tp+1)*watch_list.minstep then
 		toLog(log,"Offer. —тоим на закрытие на уровне лучше чем тейк-профит и перед нами по€вилась за€вка - передвигаемс€")
-		toLog(log,"Status="..watch_list.status_offer.." OrderPrice="..watch_list.order_offer.price.." OpenPrice="..watch_list.open_price_offer.." TP="..watch_list.tp)
+		--toLog(log,"Status="..watch_list.status_offer.." OrderPrice="..watch_list.order_offer.price.." OpenPrice="..watch_list.open_price_offer.." TP="..watch_list.tp)
+		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancellclose" end
+		toLog(log,ms)
+	-- если стоим на закрытие, прошла сделка хуже и перед нами по€вилась за€вка - переставитс€
+	elseif watch_list.status_offer=='close' and watch_list.bad_offer and bbid>watch_list.order_offer.price then
+		toLog(log,"Offer. Eсли стоим на закрытие, прошла сделка хуже и перед нами по€вилась за€вка - переставитс€")
+		--toLog(log,"Status="..watch_list.status_offer.." OrderPrice="..watch_list.order_offer.price.." OpenPrice="..watch_list.open_price_offer.." TP="..watch_list.tp)
 		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancellclose" end
 		toLog(log,ms)
@@ -186,20 +204,15 @@ function FindOfferClosePrice(security,price)
 	local tp_level=watch_list.tp*watch_list.minstep
 	local bbid=tonumber(getParamEx(watch_list.class,security,"BID").param_value)
 	local lasttrade=tonumber(getParamEx(watch_list.class,security,"LAST").param_value)
-	if price-tp_level>bbid then
+	if price-tp_level>bbid or watch_list.bad_offer then
 		toLog(log,"Best Bid. tp="..(bbid+watch_list.minstep))
 		return bbid+watch_list.minstep
 	else
 		local ql2=getQuoteLevel2(watch_list.class,security)
 		beg=findBegemot("bid",ql2.bid,ql2.bid_count,security)
 		if beg==0 then
-			if lasttrade>price+watch_list.minstep then
-				toLog(log,"Best Bid.No beg. Bad trade. tp="..(bbid+-watch_list.minstep))
-				return bbid+watch_list.minstep
-			else
 				toLog(log,"At TP-level. No beg. tp="..price-tp_level)
 				return price-tp_level
-			end
 		else
 			if price+tp_level<beg then
 				toLog(log,"Before beg. tp="..(beg+watch_list.minstep))
@@ -214,21 +227,16 @@ end
 function FindBidClosePrice(security,price)
 	local tp_level=watch_list.tp*watch_list.minstep
 	local bask=tonumber(getParamEx(watch_list.class,security,"OFFER").param_value)
-	local lasttrade=tonumber(getParamEx(watch_list.class,security,"LAST").param_value)
-	if price+tp_level<bask then
+	--local lasttrade=tonumber(getParamEx(watch_list.class,security,"LAST").param_value)
+	if price+tp_level<bask or watch_list.bad_bid then
 		toLog(log,"Best ask. tp="..(bask-watch_list.minstep))
 		return bask-watch_list.minstep
 	else
 		local ql2=getQuoteLevel2(watch_list.class,security)
 		beg=findBegemot("ask",ql2.offer,ql2.bid_count,security)
 		if beg==0 then
-			if lasttrade<price-watch_list.minstep then
-				toLog(log,"Best ask.No beg. Bad trade. tp="..(bask-watch_list.minstep))
-				return bask-watch_list.minstep
-			else
 				toLog(log,"At TP-level. No beg. tp="..price+tp_level)
 				return price+tp_level
-			end
 		else
 			if price+tp_level>beg then
 				toLog(log,"Before beg. tp="..(beg-watch_list.minstep))
@@ -312,6 +320,7 @@ function OnOrderDo(order)
 				watch_list.order_bid={}
 				watch_list.open_price_bid=0
 				watch_list.status_bid=""
+				watch_list.bad_bid=false
 			end
 		end
 		--if order.trans_id==watch_list.trans_bid then watch_list.trans_bid=0 end
@@ -356,6 +365,7 @@ function OnOrderDo(order)
 				watch_list.order_offer={}
 				watch_list.open_price_offer=0
 				watch_list.status_offer=""
+				watch_list.bad_offer=false
 			end
 		end
 		--if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
@@ -388,6 +398,7 @@ function OnAllTradeDo(trade)
 	-- check bad data
 	if watch_list.status_bid=="close" and trade<watch_list.open_price_bid-watch_list.minstep then
 		toLog(log,"Bid. —делка ниже цены открыти€. Trade="..trade.." OpenPrice="..watch_list.open_price_bid.." S="..watch_list.status_bid)
+		watch_list.bad_bid=true
 		local pr=tonumber(FindBidClosePrice(watch_list.code,watch_list.open_price_bid))
 		if pr~=watch_list.order_bid.price and pr+watch_list.minstep~=watch_list.order_bid.price then
 			toLog(log,"Bid. Ќеобходимо передвинуть за€вку. CurPrice="..watch_list.order_bid.price.." CalculatedPrice="..pr)
@@ -398,6 +409,7 @@ function OnAllTradeDo(trade)
 	end
 	if watch_list.status_offer=="close" and trade>watch_list.open_price_offer+watch_list.minstep then
 		toLog(log,"Offer. —делка выше цены открыти€. Trade="..trade.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
+		watch_list.bad_offer=true
 		local pr=tonumber(FindOfferClosePrice(watch_list.code,watch_list.open_price_offer))
 		if pr~=watch_list.order_offer.price and pr-watch_list.minstep~=watch_list.order_offer.price then
 			toLog(log,"Offer. Ќеобходимо передвинуть за€вку. CurPrice="..watch_list.order_offer.price.." CalculatedPrice="..pr)
