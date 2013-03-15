@@ -1,12 +1,15 @@
--- version 0.4.0
+-- version 0.4.2
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
 -- 0.3.2 bug in change orders on update
 -- 0.4.0 moved from OnAllTrade to OnParam, no class in settings
 -- 0.4.1 new condition for close order
+-- 0.4.2 interface at settings load
 require"QL"
 require"luaxml"
+require'iuplua'
+VERSION=''
 log="begemot.log"
 settings_file="settings.xml"
 watch_list={}
@@ -24,11 +27,33 @@ function getSettings(path)
 	local file=xml.load(path)
 	toLog(log,"XML loaded")
 	if file==nil then
-		message("Begemot can`t open settings file!",3)
-		toLog(log,"File can`t be openned!")
-		return false
+		--message("Begemot can`t open settings file!",3)
+		toLog(log,"File can`t be openned! File would be created.")
+		file=vml.eval(empty_str)
 	end 
 	toLog(log,"File oppened")
+	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+	file:find("volume").value,file:find("account").value,file:find("clc").value=
+      iup.GetParam("Begemot "..VERSION, nil,
+                  "Код бумаги: %s\n"..
+				  "Разрешить торговлю от Аска: %b\n"..
+				  "Разрешить торговлю от Бида: %b\n"..
+				  "Обьем бегемота для Бид: %i\n"..
+				  "Обьем бегемота для Аск : %i\n"..
+				  "Тэйк-профит (в шагах цены): %i\n"..
+				  "Обьем заявок: %i\n"..
+				  "Номер счета: %s\n"..
+				  "Код клиента: %s\n",
+				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+	file:find("volume").value,file:find("account").value,file:find("clc").value)
+	toLog(log,"GetSettingsParam done")
+	if (not ret) then
+		iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
+		toLog(log,"Cancelled on GetSettingsParam")
+		do_main=false
+		return
+	end
+	file:save(path)
 	watch_list.code=file:find("security").value
 	watch_list.class=getSecurityInfo('',watch_list.code).class_code
 	watch_list.volume_offer=tonumber(file:find("volume_offer").value)

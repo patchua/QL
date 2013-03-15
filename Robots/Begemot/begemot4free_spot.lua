@@ -1,12 +1,15 @@
--- version 0.4.1
+-- version 0.4.2
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
 -- 0.3.2 bug in change orders on update
 -- 0.4 different versions for spot and fut, moved from OnAllTrade to OnParam, no class in settings
 -- 0.4.1 new rule for close orders
+-- 0.4.2 interface at start
 require"QL"
 require"luaxml"
+require'iuplua'
+VERSION='0.4.1'
 log="begemot.log"
 settings_file="settings.xml"
 watch_list={}
@@ -19,17 +22,52 @@ trans_replies={}
 bad_transactions={}
 is_run=false
 last_trade=0
+empty_str=[[
+<table>
+	<security value="" />
+	<volume_offer value="" />
+	<volume_bid value="" />
+	<takeprofit value="" />
+	<volume value="" />
+	<account value="" />
+	<clc value="" />
+	<bidEnable value="" />
+	<askEnable value="" />
+</table>
+]]
 
 function getSettings(path)
 	toLog(log,"Try to open settings "..path)
 	local file=xml.load(path)
 	toLog(log,"XML loaded")
 	if file==nil then
-		message("Begemot can`t open settings file!",3)
-		toLog(log,"File can`t be openned!")
-		return false
+		--message("Begemot can`t open settings file!",3)
+		toLog(log,"File can`t be openned! File would be created.")
+		file=vml.eval(empty_str)
 	end 
 	toLog(log,"File oppened")
+	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+	file:find("volume").value,file:find("account").value,file:find("clc").value=
+      iup.GetParam("Begemot "..VERSION, nil,
+                  "Код бумаги: %s\n"..
+				  "Разрешить торговлю от Аска: %b\n"..
+				  "Разрешить торговлю от Бида: %b\n"..
+				  "Обьем бегемота для Бид: %i\n"..
+				  "Обьем бегемота для Аск : %i\n"..
+				  "Тэйк-профит (в шагах цены): %i\n"..
+				  "Обьем заявок: %i\n"..
+				  "Номер счета: %s\n"..
+				  "Код клиента: %s\n",
+				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+	file:find("volume").value,file:find("account").value,file:find("clc").value)
+	toLog(log,"GetSettingsParam done")
+	if (not ret) then
+		iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
+		toLog(log,"Cancelled on GetSettingsParam")
+		do_main=false
+		return
+	end
+	file:save(path)
 	watch_list.code=file:find("security").value
 	watch_list.class=getSecurityInfo('',watch_list.code).class_code
 	watch_list.volume_offer=tonumber(file:find("volume_offer").value)
@@ -374,7 +412,7 @@ function OnOrderDo(order)
 			if watch_list.status_offer=="" then toLog(log,"Offer order cancelled") watch_list.order_offer={} end
 			if watch_list.status_offer=="cancell" then watch_list.status_offer='' toLog(log,"Open offer order cancelled. Try to set new.") OnQuoteDo(order.class_code,order.seccode) end
 			if watch_list.status_offer=="cancellclose" then 
-				local pr=FindOfferClosePrice(order.seccode,order.price)
+				local pr=FindOfferClosePrice(order.seccode,watch_list.open_price_offer)
 				local trid,ms=sendLimit(order.class_code,order.seccode,"B",toPrice(order.seccode,pr),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotCO")
 				if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
 				toLog(log,ms)
@@ -396,26 +434,30 @@ function OnAllTradeDo(trade)
 	toLog(log,s)
 	--toLog(log,trade)
 	-- check bad data
-	if watch_list.status_bid=="close" and trade<watch_list.open_price_bid-watch_list.minstep then
+	if (not watch_list.bad_bid) and string.find(watch_list.status_bid,"close")~=nil and trade<watch_list.open_price_bid-watch_list.minstep then
 		toLog(log,"Bid. Сделка ниже цены открытия. Trade="..trade.." OpenPrice="..watch_list.open_price_bid.." S="..watch_list.status_bid)
 		watch_list.bad_bid=true
-		local pr=tonumber(FindBidClosePrice(watch_list.code,watch_list.open_price_bid))
-		if pr~=watch_list.order_bid.price and pr+watch_list.minstep~=watch_list.order_bid.price then
-			toLog(log,"Bid. Необходимо передвинуть заявку. CurPrice="..watch_list.order_bid.price.." CalculatedPrice="..pr)
-			local trid,ms=killOrder(watch_list.order_bid.ordernum,watch_list.code,watch_list.class)
-			if trid~=nil then watch_list.status_bid="waitcancellclose" transactions[trid]="bid" end
-			toLog(log,ms)
+		if watch_list.status_bid=="close" then
+			local pr=tonumber(FindBidClosePrice(watch_list.code,watch_list.open_price_bid))
+			if pr~=watch_list.order_bid.price and pr+watch_list.minstep~=watch_list.order_bid.price then
+				toLog(log,"Bid. Необходимо передвинуть заявку. CurPrice="..watch_list.order_bid.price.." CalculatedPrice="..pr)
+				local trid,ms=killOrder(watch_list.order_bid.ordernum,watch_list.code,watch_list.class)
+				if trid~=nil then watch_list.status_bid="waitcancellclose" transactions[trid]="bid" end
+				toLog(log,ms)
+			end
 		end
 	end
-	if watch_list.status_offer=="close" and trade>watch_list.open_price_offer+watch_list.minstep then
+	if (not watch_list.bad_offer) and string.find(watch_list.status_offer,"close")~=nil and trade>watch_list.open_price_offer+watch_list.minstep then
 		toLog(log,"Offer. Сделка выше цены открытия. Trade="..trade.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
 		watch_list.bad_offer=true
-		local pr=tonumber(FindOfferClosePrice(watch_list.code,watch_list.open_price_offer))
-		if pr~=watch_list.order_offer.price and pr-watch_list.minstep~=watch_list.order_offer.price then
-			toLog(log,"Offer. Необходимо передвинуть заявку. CurPrice="..watch_list.order_offer.price.." CalculatedPrice="..pr)
-			local trid,ms=killOrder(watch_list.order_offer.ordernum,watch_list.code,watch_list.class)
-			if trid~=nil then watch_list.status_offer="waitcancellclose" transactions[trid]="offer" end
-			toLog(log,ms)
+		if watch_list.status_offer=='close' then
+			local pr=tonumber(FindOfferClosePrice(watch_list.code,watch_list.open_price_offer))
+			if pr~=watch_list.order_offer.price and pr-watch_list.minstep~=watch_list.order_offer.price then
+				toLog(log,"Offer. Необходимо передвинуть заявку. CurPrice="..watch_list.order_offer.price.." CalculatedPrice="..pr)
+				local trid,ms=killOrder(watch_list.order_offer.ordernum,watch_list.code,watch_list.class)
+				if trid~=nil then watch_list.status_offer="waitcancellclose" transactions[trid]="offer" end
+				toLog(log,ms)
+			end
 		end
 	end
 	--toLog(log,"OnAllTrade. "..(os.clock()-st))
@@ -462,7 +504,6 @@ function OnInitDo()
 		watch_list.position_offer=begoffer
 	end
 	]]--
-	is_run=true
 	toLog(log,"Initialization finished. ")
 end
 
@@ -482,14 +523,16 @@ function OnQuote(class,sec)
 		["class"]=class,
 		["security"]=sec
 		}
-		table.insert(quotes,tmp)
+		quotes[#quotes+1]=tmp
+		--table.insert(quotes,tmp)
 	elseif class==nil or sec==nil then
 		toLog(log,"Nil update OnQuote")
 	end
 end
 function OnOrder(order)
 	if is_run and watch_list.code==order.seccode then
-		table.insert(orders,order)
+		orders[#orders+1]=order
+		--table.insert(orders,order)
 	elseif order==nil then
 		toLog(log,"Nil update on Order")
 	end
@@ -504,12 +547,17 @@ end]]
 function OnParam(pclass,psec)
 	if not is_run or psec~=watch_list.code then return end
 	local t=tonumber(getParamEx(pclass,psec,"LAST").param_value)
-	if last_trade~=t then table.insert(on_param,t) last_trade=t end
+	if last_trade~=t then 
+		on_param[#on_param+1]=t
+		--table.insert(on_param,t) 
+		last_trade=t 
+	end
 end
 function OnTransReply(reply)
 	if is_run then
 		if reply==nil then toLog(log,"Nil update on transreply") return end
-		table.insert(trans_replies,reply)
+		trans_replies[#trans_replies+1]=reply
+		--table.insert(trans_replies,reply)
 	end
 end
 
@@ -537,4 +585,5 @@ function main()
 		end
 	end
 	toLog(log,"Main ended")
+	iup.Close()
 end
