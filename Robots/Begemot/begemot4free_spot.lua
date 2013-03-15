@@ -24,26 +24,28 @@ is_run=false
 last_trade=0
 empty_str=[[
 <table>
-	<security value="" />
-	<volume_offer value="" />
-	<volume_bid value="" />
-	<takeprofit value="" />
-	<volume value="" />
-	<account value="" />
-	<clc value="" />
-	<bidEnable value="" />
-	<askEnable value="" />
+	<security value=" " />
+	<volume_offer value="0" />
+	<volume_bid value="0" />
+	<takeprofit value="0" />
+	<volume value="0" />
+	<account value="0" />
+	<clc value="0" />
+	<bidEnable value="0" />
+	<askEnable value="0" />
 </table>
 ]]
 
 function getSettings(path)
 	toLog(log,"Try to open settings "..path)
+	local f=io.open(path)
+	if f==nil then toLog(log,'1111') f=io.open(path,"w") f:close() else f:close() end
 	local file=xml.load(path)
 	toLog(log,"XML loaded")
 	if file==nil then
 		--message("Begemot can`t open settings file!",3)
 		toLog(log,"File can`t be openned! File would be created.")
-		file=vml.eval(empty_str)
+		file=xml.eval(empty_str)
 	end 
 	toLog(log,"File oppened")
 	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
