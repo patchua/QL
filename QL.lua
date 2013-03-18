@@ -1,4 +1,4 @@
--- Version 0.4.3
+--Version='0.4.3'
 -- По всем вопросам можно писать тут - forum.qlua.org
 --[[
 	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
@@ -890,12 +890,20 @@ function HiResTimer()
 	return (c1-c0)/f0
 end
 function getSTime()
-	--возвращает время сервера в виде числа
-	-- при вызове без параметров - текущее, при вызове с параметрами текущее минус amount таймфреймов timeframe
+	--возвращает текущее время сервера в виде числа формата HHMMSS
 	local t = ""
 	local a = tostring(getInfoParam("SERVERTIME"))
 	for s in a:gmatch('%d+') do
 		t=t..s
+	end
+	return tonumber(t)
+end
+function getTradeDate()
+	-- возвращает текущую торговую дату в виде числа формата YYYYMMDD
+	local t = ""
+	local a = tostring(getInfoParam("TRADEDATE"))
+	for s in a:gmatch('%d+') do
+		t=s..t
 	end
 	return tonumber(t)
 end
@@ -910,4 +918,15 @@ function isTradeTime(exchange, shift)
 	if (exchange=='UX' or exchange=='MICEX') and time+sp>103000 and time+sp<173000 then return true else return false end
 	if exchange=='FORTS' and ((time+sp>100000 and time+sp<140000) or (time+sp>140300 and time+sp<184500) or (time+sp>190000 and time+sp<235000)) then return true else return false end
 	return false
+end
+function datetime2string(dt)
+	-- преобразует обьект datetime в строку формата YYYYMMDDHHMMSS
+	local s='' 
+	if string.len(tostring(dt.year))<4 then s=s..'20'..dt.year else s=s..dt.year end
+	if string.len(tostring(dt.month))<2 then s=s..'0'..dt.month else s=s..dt.month end
+	if string.len(tostring(dt.day))<2 then s=s..'0'..dt.day else s=s..dt.day end
+	if string.len(tostring(dt.hour))<2 then s=s..'0'..dt.hour else s=s..dt.hour end
+	if string.len(tostring(dt.min))<2 then s=s..'0'..dt.min else s=s..dt.min end
+	if string.len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
+	return s
 end
