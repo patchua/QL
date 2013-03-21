@@ -720,6 +720,7 @@ end
 function toPrice(security,value)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
+	if (security==nil or value==nil) then return nil end
 	local scale=getParamEx(getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
 	return string.format("%."..string.format("%d",scale).."f",tonumber(value))
 end
