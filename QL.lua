@@ -931,3 +931,16 @@ function datetime2string(dt)
 	if string.len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
 	return s
 end
+function isEqual(table1,table2)
+	for k,v in pairs(table1) do
+		--toLog("isE.txt","key="..k.." v="..v)
+		if not pcall(table2[k]) then --toLog("isE.txt","No such key in table2") 
+			return false 
+		end
+		if v~=table2[k] then --toLog("isE.txt",v.."~=Table2["..k.."]") 
+			return false 
+		end
+	end
+	--toLog("isE.txt","return True")
+	return true
+end
