@@ -117,9 +117,9 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		transaction.client_code=tostring(client_code)
 	end
 	if comment~=nil then
-		transaction.client_code=string.sub(transaction.client_code..'/'..tostring(comment),0,20)
+		transaction.client_code=string.sub(transaction.client_code..'//'..tostring(comment),0,20)
 	else
-		transaction.client_code=string.sub(transaction.client_code..'/QL',0,20)
+		transaction.client_code=string.sub(transaction.client_code..'//QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -933,14 +933,12 @@ function datetime2string(dt)
 end
 function isEqual(table1,table2)
 	for k,v in pairs(table1) do
-		--toLog("isE.txt","key="..k.." v="..v)
-		if not pcall(table2[k]) then --toLog("isE.txt","No such key in table2") 
+		if not pcall(table2[k]) then
 			return false 
 		end
-		if v~=table2[k] then --toLog("isE.txt",v.."~=Table2["..k.."]") 
+		if v~=table2[k] then
 			return false 
 		end
 	end
-	--toLog("isE.txt","return True")
 	return true
 end
