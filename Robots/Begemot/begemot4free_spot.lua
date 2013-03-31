@@ -1,4 +1,4 @@
--- version 0.4.2
+-- version 0.4.3
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
@@ -6,10 +6,11 @@
 -- 0.4 different versions for spot and fut, moved from OnAllTrade to OnParam, no class in settings
 -- 0.4.1 new rule for close orders
 -- 0.4.2 interface at start
+-- bug at close
 require"QL"
 require"luaxml"
 require'iuplua'
-VERSION='0.4.1'
+VERSION='0.4.2'
 log="begemot.log"
 settings_file="settings.xml"
 watch_list={}
@@ -39,7 +40,7 @@ empty_str=[[
 function getSettings(path)
 	toLog(log,"Try to open settings "..path)
 	local f=io.open(path)
-	if f==nil then toLog(log,'1111') f=io.open(path,"w") f:close() else f:close() end
+	if f==nil then f=io.open(path,"w") f:close() else f:close() end
 	local file=xml.load(path)
 	toLog(log,"XML loaded")
 	if file==nil then
@@ -54,10 +55,10 @@ function getSettings(path)
                   "Код бумаги: %s\n"..
 				  "Разрешить торговлю от Аска: %b\n"..
 				  "Разрешить торговлю от Бида: %b\n"..
-				  "Обьем бегемота для Бид: %i\n"..
-				  "Обьем бегемота для Аск : %i\n"..
+				  "Объем бегемота для Бид: %i\n"..
+				  "Объем бегемота для Аск : %i\n"..
 				  "Тэйк-профит (в шагах цены): %i\n"..
-				  "Обьем заявок: %i\n"..
+				  "Объем заявок: %i\n"..
 				  "Номер счета: %s\n"..
 				  "Код клиента: %s\n",
 				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
@@ -136,8 +137,8 @@ function AnalyzeBegemot(sec_code,old_value,new_value)
 		return old_value
 	end
 end
-function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
-	toLog(log,"Trade BId started. CBBid="..cur_begbid.." NBBid="..new_begbid.." NBOffer="..new_begoffer.." BOffer="..soffer.." Sec="..code)
+function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,boffer_volume,soffer,code)
+	toLog(log,"Trade BId started. CBBid="..cur_begbid.." NBBid="..new_begbid.." NBOffer="..new_begoffer.." BOffer="..boffer.." BOfferVol="..boffer_volume.." SOffer"..soffer.." Sec="..code)
 	-- если бегемот исчез и есть заявка на открытие - снять
 	if watch_list.status_bid=="open" and new_begbid==0 then
 		toLog(log,"Bid. если бегемот исчез и есть заявка на открытие - снять ")
@@ -165,7 +166,7 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitcancellclose" end
 		toLog(log,ms)
 	-- если стоим на закрытие и бегемота нет и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
-	elseif watch_list.status_bid=="close" and watch_list.order_bid.price<soffer-watch_list.minstep then
+	elseif watch_list.status_bid=="close" and watch_list.order_bid.price<soffer-watch_list.minstep and watch_list.order_bid.qty==boffer_volume then
 		toLog(log,"Bid. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		--trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
 		local trid,ms=killOrder(watch_list.order_bid.ordernum,code,watch_list.class)
@@ -187,9 +188,9 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,soffer,code)
 	end
 	--toLog(log,"TradeBid ended. "..(os.clock()-st))
 end
-function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
+function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,bbid_volume,sbid,code)
 	local st=os.clock()
-	toLog(log,"Trade Offer started. CBOffer="..cur_begoffer.." NBOffer="..new_begoffer.." NBBid="..new_begbid.." BBid="..bbid.." SBid="..sbid.." Sec="..code .." BadTrade="..tostring(watch_list.bad_offer))
+	toLog(log,"Trade Offer started. CBOffer="..cur_begoffer.." NBOffer="..new_begoffer.." NBBid="..new_begbid.." BBid="..bbid.." BBidVol="..bbid_volume.." SBid="..sbid.." Sec="..code .." BadTrade="..tostring(watch_list.bad_offer))
 	-- если бегемот исчез и есть заявка на открытие - снять
 	if watch_list.status_offer=="open" and new_begoffer==0 then
 		toLog(log,"Offer. если бегемот исчез и есть заявка на открытие - снять ")
@@ -217,7 +218,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,sbid,code)
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitcancellclose" end
 		toLog(log,ms)
 	-- если стоим на закрытие и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
-	elseif watch_list.status_offer=="close" and watch_list.order_offer.price>sbid+watch_list.minstep then
+	elseif watch_list.status_offer=="close" and watch_list.order_offer.price>sbid+watch_list.minstep and watch_list.order_offer.qty==bbid_volume then
 		toLog(log,"Offer. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		--trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(code,sbid+watch_list.minstep))
 		local trid,ms=killOrder(watch_list.order_offer.ordernum,code,watch_list.class)
@@ -296,8 +297,8 @@ function OnQuoteDo(class_code,sec_code)
 	local begbid,begoffer=0,0
 	if ql2.bid_count~=0 and watch_list.volume_bid~=0 then begbid=findBegemot("bid",ql2.bid,ql2.bid_count,sec_code)	end
 	if ql2.offer_count~=0 and watch_list.volume_offer~=0 then begoffer=findBegemot("offer",ql2.offer,ql2.offer_count,sec_code)	end
-	if watch_list.bidEnable==1 then TradeBid(watch_list.position_bid,begbid,begoffer,tonumber(ql2.bid[tonumber(ql2.bid_count)].price),tonumber(ql2.bid[tonumber(ql2.bid_count)-1].price),sec_code) end
-	if watch_list.offerEnable==1 then TradeOffer(watch_list.position_offer,begoffer,begbid,tonumber(ql2.offer[1].price),tonumber(ql2.offer[2].price),sec_code) end
+	if watch_list.bidEnable==1 then TradeBid(watch_list.position_bid,begbid,begoffer,tonumber(ql2.offer[1].price),tonumber(ql2.offer[1].quantity),tonumber(ql2.offer[2].price),sec_code) end
+	if watch_list.offerEnable==1 then TradeOffer(watch_list.position_offer,begoffer,begbid,tonumber(ql2.bid[tonumber(ql2.bid_count)].price),tonumber(ql2.bid[tonumber(ql2.bid_count)].quantity),tonumber(ql2.bid[tonumber(ql2.bid_count)-1].price),sec_code) end
 	watch_list.position_bid=begbid
 	watch_list.position_offer=begoffer
 	toLog(log,"OnQuote. "..(os.clock()-st))
