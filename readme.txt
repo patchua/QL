@@ -126,3 +126,7 @@ Version 0.4.4
 	-- возвращает текущую торговую дату в виде числа формата YYYYMMDD
 28. function datetime2string(dt)
 	-- преобразует обьект datetime в строку формата YYYYMMDDHHMMSS
+29. function isEqual(tbl1,tbl2)
+-- возвращает true если таблицы tbl1 и tbl2 полснотью совпадают
+30. function isSubTable(sub,main)
+	-- возвращает true если таблица sub полностью и в точности содержится в таблице main

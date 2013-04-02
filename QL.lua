@@ -931,14 +931,18 @@ function datetime2string(dt)
 	if string.len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
 	return s
 end
-function isEqual(table1,table2)
-	for k,v in pairs(table1) do
-		if not pcall(table2[k]) then
-			return false 
-		end
-		if v~=table2[k] then
-			return false 
-		end
-	end
+function isEqual(tbl1,tbl2)
+    -- возвращает true если таблицы tbl1 и tbl2 полснотью совпадают
+	if isSubTable(tbl1,tbl2) and isSubTable(tbl2,tbl1) then return true else return false end
+end
+function isSubTable(sub,main)
+	-- возвращает true если таблица sub полностью и в точности содержится в таблице main
+	for k, v in pairs(sub ) do
+        if ( type(v) == "table" and type(main[k]) == "table" ) then
+            if ( not isSubTable( v, main[k] ) ) then return false end
+        else
+            if ( v ~= main[k] ) then return false end
+        end
+    end
 	return true
 end
