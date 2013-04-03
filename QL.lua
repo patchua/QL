@@ -1,18 +1,5 @@
 --Version='0.4.3'
 -- По всем вопросам можно писать тут - forum.qlua.org
---[[
-	Добавили moveOrder,moveOrderSpot,moveOrderFO. Вынесли список срочных классов - FUT_OPT_CLASSES. Изменили порядок входящих параметров killOrder и необходимое их минимальное количество.
-	Изменили количество входных параметров в toPrice. Добавили функцию getRowFromTable. Изменили исходящие параметры sendLimit, sendMarket, sendRPS, sendReportOnRPS
-]]--
---[[
-	ДОбавили killStopOrder,killAllStopOrders,stoporderflags2table,stoporderextflags2table, sendStop
-	Изменили - тип значения для ключей таблицы возвращаемой orderflags2table, типерь boolean(true\false)
-]]--
---[[
-	Добавили поддержку выставления заявок с разными типами исполнения и с переносом для срочного рынка. Также поле комментарий теперь адекватно заполняется.
-	Комментарий для заявок спот рынка имеет формат код_клиента/комментарий (обрезается до 20 символов)
-]]
-
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
 require"bit"
@@ -684,6 +671,9 @@ function toLog(file_path,value)
 			if type(value)=="string" or type(value)=="number" then
 				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
 				lf:write(getHRDateTime().." "..value.."\n")
+			elseif type(value)=='boolean' then
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
+				lf:write(getHRDateTime().." "..tostring(value).."\n")
 			elseif type(value)=="table" then
 				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
 				lf:write(getHRDateTime().." "..table2string(value).."\n")
@@ -698,11 +688,11 @@ function table2string(table)
 	local k,v,str=0,0,""
 	for k,v in pairs(table) do
 		if type(v)=="string" or type(v)=="number" then
-			str=str..k.."="..v
+			str=str..k.."="..v..';'
 		elseif type(v)=="table"then
-			str=str..k.."={"..table2string(v).."}"
-		elseif type(v)=="function" then
-			str=str..tostring(v)
+			str=str..k.."={"..table2string(v).."};"
+		elseif type(v)=="function" or type(v)=='boolean' then
+			str=str..k..'='..tostring(v)..';'
 		end
 	end
 	return str
@@ -747,21 +737,32 @@ function orderflags2table(flags)
 	cancell_rest(Снять остаток),iceberg
 	]]
 	local t={}
-	if bit_set(flags, 0) then t.active=true	else t.active = false end
-	if bit_set(flags,1) then t.cancelled=true 
+	local band=bit.band
+	local tobit=bit.tobit
+	if band(tobit(flags), 0x1)~=0 then t.active=true	else t.active = false end
+	if band(tobit(flags),0x2)~=0 then t.cancelled=true 
 	else	
 		if not t.active then t.done=true else t.done=false end
 		t.cancelled=false
 	end
-	if bit_set(flags, 2) then t.operation="S" else t.operation = "B" end
-	if bit_set(flags, 3) then t.limit=true else t.limit = false end
-	if bit_set(flags,4) then t.mte=true	else t.mte=false end
-	if bit_set(flags,5) then t.fill_or_kill=true else t.fill_or_kill=false end
-	if bit_set(flags,6) then t.mmorder=true else t.mmorder=false end
-	if bit_set(flags,7) then t.received=true else t.received=false end
-	if bit_set(flags,8) then t.cancell_rest=true else t.cancell_rest=false end
-	if bit_set(flags,9) then t.iceberg=true else t.iceberg=false end
+	if band(tobit(flags), 0x4)~=0 then t.operation="S" else t.operation = "B" end
+	if band(tobit(flags), 0x8)~=0 then t.limit=true else t.limit = false end
+	if band(tobit(flags),0x10)~=0 then t.mte=true	else t.mte=false end
+	if band(tobit(flags),0x20)~=0 then t.fill_or_kill=true else t.fill_or_kill=false end
+	if band(tobit(flags),0x40)~=0 then t.mmorder=true else t.mmorder=false end
+	if band(tobit(flags),0x80)~=0 then t.received=true else t.received=false end
+	if band(tobit(flags),0x100)~=0 then t.cancell_rest=true else t.cancell_rest=false end
+	if band(tobit(flags),0x200)~=0 then t.iceberg=true else t.iceberg=false end
 	if t.cancelled and t.done then message("Erorr in orderflags2table order cancelled and done!",2)	end
+	return t
+end
+function tradeflags2table(flags)
+	local t={}
+	local band=bit.band
+	local tobit=bit.tobit
+	if band(tobit(flags), 0x1)~=0 then t.operation="S" return t end
+	if band(tobit(flags), 0x2)~=0 then t.operation="B" return t end
+	t.operation=""
 	return t
 end
 function stoporderflags2table(flags)
@@ -775,23 +776,25 @@ function stoporderflags2table(flags)
 	cdtloe(Стоп-заявка снята, так как связанная заявка исполнена),minmaxcalc(Идет расчет минимума-максимума)
 	]]
 	local t={}
-	if bit_set(flags, 0) then t.active=true	else t.active = false end
-	if bit_set(flags,1) then t.cancelled=true 
+	local band=bit.band
+	local tobit=bit.tobit
+	if band(tobit(flags), 0x1) then t.active=true	else t.active = false end
+	if band(tobit(flags),0x2) then t.cancelled=true 
 	else	
 		if not t.active then t.done=true else t.done=false end
 		t.cancelled=false
 	end
-	if bit_set(flags, 2) then t.operation="S" else t.operation = "B" end
-	if bit_set(flags, 3) then t.limit=true else t.limit = false end
-	if bit_set(flags,5) then t.wait_activation=true else t.wait_activation=false end
-	if bit_set(flags,6) then t.another_server=true else t.another_server=false end
-	if bit_set(flags,8) then t.tplopf=true else t.tplopf=false end
-	if bit_set(flags,9) then t.manually_activated=true else t.manually_activated=false end
-	if bit_set(flags,10) then t.rejected=true else t.rejected=false end
-	if bit_set(flags,11) then t.rejected_limits=true else t.rejected_limits=false end
-	if bit_set(flags,12) then t.cdtloc=true else t.cdtlo=false end
-	if bit_set(flags,13) then t.cdtloe=true else t.cdtloe=false end
-	if bit_set(flags,15) then t.minmaxcalc=true else t.minmaxcalc=false end
+	if band(tobit(flags), 0x4) then t.operation="S" else t.operation = "B" end
+	if band(tobit(flags), 3) then t.limit=true else t.limit = false end
+	if band(tobit(flags),0x20) then t.wait_activation=true else t.wait_activation=false end
+	if band(tobit(flags),0x40) then t.another_server=true else t.another_server=false end
+	if band(tobit(flags),0x100) then t.tplopf=true else t.tplopf=false end
+	if band(tobit(flags),0x200) then t.manually_activated=true else t.manually_activated=false end
+	if band(tobit(flags),0x400) then t.rejected=true else t.rejected=false end
+	if band(tobit(flags),0x800) then t.rejected_limits=true else t.rejected_limits=false end
+	if band(tobit(flags),0x1000) then t.cdtloc=true else t.cdtlo=false end
+	if band(tobit(flags),0x2000) then t.cdtloe=true else t.cdtloe=false end
+	if band(tobit(flags),0x8000) then t.minmaxcalc=true else t.minmaxcalc=false end
 	return t
 end
 function stoporderextflags2table(flags)
@@ -803,15 +806,17 @@ function stoporderextflags2table(flags)
 	markettp(Выполнение тейк-профита по рыночной цене),marketstop(Выполнение стоп-заявки по рыночной цене),
 	]]
 	local t={}
-	if bit_set(flags, 0) then t.userest=true else t.userest = false end
-	if bit_set(flags,1) then t.cpf=true t.cpf=false	end
-	if bit_set(flags, 2) then t.asolopf=true else t.asolopf =false end
-	if bit_set(flags, 3) then t.percent=true else t.percent = false end
-	if bit_set(flags,4) then t.defpercent=true else t.defpercent=false end
-	if bit_set(flags,5) then t.this_day=true else t.this_day=false end
-	if bit_set(flags,6) then t.interval=true else t.interval=false end
-	if bit_set(flags,7) then t.markettp=true else t.markettp=false end
-	if bit_set(flags,8) then t.marketstop=true else t.marketstop=false end
+	local band=bit.band
+	local tobit=bit.tobit
+	if band(tobit(flags), 0x1) then t.userest=true else t.userest = false end
+	if band(tobit(flags),0x2) then t.cpf=true t.cpf=false	end
+	if band(tobit(flags), 0x4) then t.asolopf=true else t.asolopf =false end
+	if band(tobit(flags), 0x8) then t.percent=true else t.percent = false end
+	if band(tobit(flags),0x10) then t.defpercent=true else t.defpercent=false end
+	if band(tobit(flags),0x20) then t.this_day=true else t.this_day=false end
+	if band(tobit(flags),0x40) then t.interval=true else t.interval=false end
+	if band(tobit(flags),0x80) then t.markettp=true else t.markettp=false end
+	if band(tobit(flags),0x100) then t.marketstop=true else t.marketstop=false end
 	return t
 end
 function bit_set( flags, index )

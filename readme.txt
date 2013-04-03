@@ -130,3 +130,7 @@ Version 0.4.4
 -- возвращает true если таблицы tbl1 и tbl2 полснотью совпадают
 30. function isSubTable(sub,main)
 	-- возвращает true если таблица sub полностью и в точности содержится в таблице main
+31. function tradeflags2table(flags)
+-- фнукция возвращает таблицу с полным описанием заявки по флагам
+	--[[ Атрибуты :operation("B" for Buy, "S" for Sell, "" for not defined(index for example))
+	]]
