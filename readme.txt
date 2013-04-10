@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.4.4
+Version 0.4.5
 
 1. function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expite_date)
 -- отправка лимитированной заявки
@@ -134,3 +134,5 @@ Version 0.4.4
 -- фнукция возвращает таблицу с полным описанием заявки по флагам
 	--[[ Атрибуты :operation("B" for Buy, "S" for Sell, "" for not defined(index for example))
 	]]
+32. function getLTime()
+	-- возвращает текущее время компьютера в виде числа формата HHMMSS

@@ -1,4 +1,4 @@
---Version='0.4.3'
+--Version='0.4.5'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -631,27 +631,31 @@ function killAllStopOrders(table_mask)
 	end
 	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
 end
-function getPosition(security)
+function getPosition(security,account)
     --возвращает чистую позицию по инструменту
 	local class_code=getSecurityInfo("",security).class_code
     if string.find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
-		local row=getRowFromTable("futures_client_holding","seccode",security)
-		if row~=nil then
-			if row.totalnet==nil then
-				return 0
-			else
-				return row.totalnet
+		for i=0,getNumberOf("futures_client_holding") do
+			local row=getItem("futures_client_holding",i)
+			if row~=nil and row.seccode==security and row.trdaccid==account then
+				if row.totalnet==nil then
+					return 0
+				else
+					return row.totalnet
+				end
 			end
 		end
 	else
 	-- spot
-		local row=getRowFromTable("account_positions","seccode",security)
-		if row~=nil then
-			if row.currentpos==nil then
-				return 0
-			else
-				return row.currentpos
+		for i=0,getNumberOf("account_positions") do
+			local row=getItem("account_positions",i)
+			if row~=nil and row.seccode==security and row.trdaccid==account then
+				if row.currentpos==nil then
+					return 0
+				else
+					return row.currentpos
+				end
 			end
 		end
 	end
@@ -757,6 +761,9 @@ function orderflags2table(flags)
 	return t
 end
 function tradeflags2table(flags)
+	-- фнукция возвращает таблицу с полным описанием заявки по флагам
+	--[[ Атрибуты :operation("B" for Buy, "S" for Sell, "" for not defined(index for example))
+	]]
 	local t={}
 	local band=bit.band
 	local tobit=bit.tobit
@@ -903,6 +910,15 @@ function getSTime()
 		t=t..s
 	end
 	return tonumber(t)
+end
+function getLTime()
+	-- возвращает текущее время компьютера в виде числа формата HHMMSS
+	local t=os.date('*t')
+	local a=""
+	if string.len(tostring(t.hour))<2 then a='0'..t.hour else a=t.hour end
+	if string.len(tostring(t.min))<2 then a=a..'0'..t.min else a=a..t.min end
+	if string.len(tostring(t.sec))<2 then a=a..'0'..t.sec else a=a..t.sec end
+	return tonumber(a)
 end
 function getTradeDate()
 	-- возвращает текущую торговую дату в виде числа формата YYYYMMDD
