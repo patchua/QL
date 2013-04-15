@@ -1,4 +1,4 @@
---Version='0.4.5'
+--Version='0.4.5.1'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -11,20 +11,21 @@ NOTRANDOMIZED=true
 --[[
 Trading Module
 ]]--
-function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expire_date)
+function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expire_date,market_maker)
 	if string.find(FUT_OPT_CLASSES,class)~=nil then
-		return sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
+		return sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	else
-		return sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
+		return sendLimitSpot(class,security,direction,price,volume,account,client_code,comment,market_maker)
 	end
 end
-function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date)
+function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	-- отправка лимитированной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
 	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
 	-- если код клиента нил - подлставляем счет (для спот-рынков)
 	-- execution_condition может принимать 2 варианта - FILL_OR_KILL(Немедленно или отклонить),KILL_BALANCE(Снять остаток). Если параметр не указан то по умолчанию Поставить в очередь. ВНИМАНИЕ! Работает ТОЛЬКО на срочном рынке!
 	-- expire_date - указывается для переноса заявок на срочном рынке
+	-- market_maker - признак заявки маркет-мейкера. true\false
 	-- Данная функция возвращает 2 параметра 
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
@@ -65,6 +66,9 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 			transaction["Условие исполнения"]='Снять остаток'
 		end
 	end
+	if market_maker~=nil and market_maker then
+		transaction['MARKET_MAKER_ORDER']='YES'
+	end
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil, "QL.sendLimitFO():"..res
@@ -72,11 +76,12 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		return trans_id, "QL.sendLimitFO(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
-function sendLimitSpot(class,security,direction,price,volume,account,client_code,comment)
+function sendLimitSpot(class,security,direction,price,volume,account,client_code,comment,market_maker)
 	-- отправка лимитированной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
 	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
 	-- если код клиента нил - подлставляем счет
+	-- market_maker - признак заявки маркет-мейкера. true\false
 	-- Данная функция возвращает 2 параметра 
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
@@ -107,6 +112,9 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		transaction.client_code=string.sub(transaction.client_code..'//'..tostring(comment),0,20)
 	else
 		transaction.client_code=string.sub(transaction.client_code..'//QL',0,20)
+	end
+	if market_maker~=nil and market_maker then
+		transaction['MARKET_MAKER_ORDER']='YES'
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -648,10 +656,12 @@ function getPosition(security,account)
 		end
 	else
 	-- spot
-		for i=0,getNumberOf("account_positions") do
-			local row=getItem("account_positions",i)
+		toLog(log,'posnum='..getNumberOf("depo_limits"))
+		for i=0,getNumberOf("depo_limits") do
+			local row=getItem("depo_limits",i)
+			toLog(log,row)
 			if row~=nil and row.seccode==security and row.trdaccid==account then
-				if row.currentpos==nil then
+				if row.currentbal==nil then
 					return 0
 				else
 					return row.currentpos
