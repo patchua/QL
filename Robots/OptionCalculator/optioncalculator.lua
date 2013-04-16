@@ -8,7 +8,7 @@ data={}
 portfolios_list={}
 gui={}
 last_calc_time=0
-period=10
+period=1
 riskFreeRate=0
 yearLength=365
 FUTCLASSES='SPBFUT,FUTUX'
@@ -61,27 +61,31 @@ function gamma(settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
 	return normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)/(settleprice*volatility*math.sqrt(pdaystomate))
 end
+function gammap(settleprice,strike,volatility,pdaystomate,risk_free)
+	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
+	return normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)/(100*volatility*math.sqrt(pdaystomate))
+end
 function theta(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
 	local temp=settleprice*math.exp(-1*risk_free*pdaystomate)
 	local d2=d1-volatility*math.sqrt(pdaystomate)
 	if opt_type=='Call' then
-		return -1*(temp*normalDistrDensity(d1)*volatility)/(2*math.sqrt(pdaystomate))+risk_free*temp*normalDistr(d1)-risk_free*strike*temp*normalDistr(d2)
+		return (-1*(temp*normalDistrDensity(d1)*volatility)/(2*math.sqrt(pdaystomate))+risk_free*temp*normalDistr(d1)-risk_free*strike*temp*normalDistr(d2))/yearLength
 	else
-		return -1*(temp*normalDistrDensity(d1)*volatility)/(2*math.sqrt(pdaystomate))-risk_free*temp*normalDistr(-1*d1)+risk_free*strike*temp*normalDistr(-1*d2)
+		return (-1*(temp*normalDistrDensity(d1)*volatility)/(2*math.sqrt(pdaystomate))-risk_free*temp*normalDistr(-1*d1)+risk_free*strike*temp*normalDistr(-1*d2))/yearLength
 	end
 end
 function vega(settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
-	return settleprice*normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)*math.sqrt(pdaystomate)
+	return settleprice*normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)*math.sqrt(pdaystomate)/100
 end
 function rho(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
 	local d2=d1-volatility*math.sqrt(pdaystomate)
 	if opt_type=='Call' then
-		return pdaystomate*strike*math.exp(-1*risk_free*pdaystomate)*normalDistr(d2)
+		return pdaystomate*strike*math.exp(-1*risk_free*pdaystomate)*normalDistr(d2)/100
 	else
-		return -1*pdaystomate*strike*math.exp(-1*risk_free*pdaystomate)*normalDistr(-1*d2)
+		return -1*pdaystomate*strike*math.exp(-1*risk_free*pdaystomate)*normalDistr(-1*d2)/100
 	end
 end
 function phi(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
@@ -295,7 +299,7 @@ function calculateGreeks(acc,base)
 				pdtm=getParam(k,'DAYS_TO_MAT_DATE')/yearLength
 				toLog(log,k.." Position Base="..base.." type="..opttype..' BasePrice='..sprice..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
 				pl.delta=pl.delta+v.totalnet*delta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
-				pl.gamma=pl.gamma+v.totalnet*gamma(sprice,strike,volat,pdtm,riskFreeRate)
+				pl.gamma=pl.gamma+v.totalnet*gammap(sprice,strike,volat,pdtm,riskFreeRate)
 				pl.vega=pl.vega+v.totalnet*vega(sprice,strike,volat,pdtm,riskFreeRate)
 				pl.theta=pl.theta+v.totalnet*theta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				pl.rho=pl.rho+v.totalnet*rho(opttype,sprice,strike,volat,pdtm,riskFreeRate)
@@ -311,13 +315,13 @@ function createGUIelement(acc,base)
 	t.acc_lbl=iup.label{title=acc,expand="YES"}
 	t.base_lbl=iup.label{title=base,expand="YES"}
 	t.delta_lbl=iup.label{title='delta=',expand="YES"}
-	t.gamma_lbl=iup.label{title='gamma=',expand="YES"}
+	t.gamma_lbl=iup.label{title='gamma(%)=',expand="YES"}
 	t.theta_lbl=iup.label{title='theta=',expand="YES"}
 	t.vega_lbl=iup.label{title='vega=',expand="YES"}
 	t.rho_lbl=iup.label{title='rho=',expand="YES"}
-	t.phi_lbl=iup.label{title='phi=',expand="YES"}
-	t.zeta_lbl=iup.label{title='zeta=',expand="YES"}
-	hbox=iup.hbox{t.acc_lbl,t.base_lbl,t.delta_lbl,t.gamma_lbl,t.theta_lbl,t.vega_lbl,t.rho_lbl,t.phi_lbl,t.zeta_lbl}
+	--t.phi_lbl=iup.label{title='phi=',expand="YES"}
+	--t.zeta_lbl=iup.label{title='zeta=',expand="YES"}
+	hbox=iup.hbox{t.acc_lbl,t.base_lbl,t.delta_lbl,t.gamma_lbl,t.theta_lbl,t.vega_lbl,t.rho_lbl}--,t.phi_lbl,t.zeta_lbl}
 	if iup.Append(mainbox,hbox)==nil then toLog(log,"Can`t append interface element") return nil end
 	--if iup.MainLoopLevel()~=0 then
 		--toLog(log,'GUI launched. need to call Map&Refresh')
@@ -341,12 +345,12 @@ function updateGUI()
 			else
 				toLog(log,'Update controls')
 				gui[k][k1].delta_lbl.title='delta='..string.format('%.2f',v1.delta)
-				gui[k][k1].gamma_lbl.title='gamma='..string.format('%.2f',v1.gamma)
+				gui[k][k1].gamma_lbl.title='gamma='..string.format('%.6f',v1.gamma)
 				gui[k][k1].theta_lbl.title='theta='..string.format('%.2f',v1.theta)
 				gui[k][k1].vega_lbl.title='vega='..string.format('%.2f',v1.vega)
 				gui[k][k1].rho_lbl.title='rho='..string.format('%.2f',v1.rho)
-				gui[k][k1].phi_lbl.title='phi='..string.format('%.2f',v1.phi)
-				gui[k][k1].zeta_lbl.title='zeta='..string.format('%.2f',v1.zeta)
+				--gui[k][k1].phi_lbl.title='phi='..string.format('%.2f',v1.phi)
+				--gui[k][k1].zeta_lbl.title='zeta='..string.format('%.2f',v1.zeta)
 			end
 		end
 	end
