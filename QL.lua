@@ -1,4 +1,4 @@
---Version='0.4.5.1'
+--Version='0.4.5.2'
 -- ѕо всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -6,8 +6,6 @@ require"bit"
 require"socket"
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 NOTRANDOMIZED=true
---require"iuplua"
---require"iupluacontrols"
 --[[
 Trading Module
 ]]--
@@ -674,6 +672,17 @@ end
 --[[
 Support Functions
 ]]--
+function getParam(security,param_name)
+	--вызывает стандартную функцию getParamEx. јвтоматически находит код класса. возвращает значение в правильном формате. ¬ случае ошибки возвращает диагностику вторым аргументом
+	if security==nil or security=='' or param_name==nil or param_name=='' then return nil,'Bad arguments' end
+	local t=getParamEx(getSecurityInfo('',security).class_code,security,param_name)
+	if t.result~='1' then return nil,param_name..' for '..security..' nor found' end
+	if t.param_type=='3' then
+		return t.param_image
+	else
+		return t.param_value
+	end
+end
 function toLog(file_path,value)
 	-- запись в лог параметра value
 	-- value может быть числом, строкой или таблицей 

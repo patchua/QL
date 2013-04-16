@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.4.5
+Version 0.4.5.2
 
 1. function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expite_date)
 -- отправка лимитированной заявки
@@ -136,3 +136,5 @@ Version 0.4.5
 	]]
 32. function getLTime()
 	-- возвращает текущее время компьютера в виде числа формата HHMMSS
+33. function getParam(security,param_name)
+	--вызывает стандартную функцию getParamEx. Автоматически находит код класса. возвращает значение в правильном формате. В случае ошибки возвращает диагностику вторым аргументом
