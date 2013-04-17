@@ -734,11 +734,11 @@ function QTable:AddColumn(name, c_type, width, ff )
     col_desc.id = self.curr_col
 	self.columns[name] = col_desc
     -- name используетс€ в качестве заголовка таблицы
-    AddColumn(self.t_id, self.curr_col, name, true, c_type, width)
+    return AddColumn(self.t_id, self.curr_col, name, true, c_type, width)
 end 
 function QTable:Clear()
      -- очистить таблицу
-     Clear(self.t_id)
+     return Clear(self.t_id)
 end 
 function QTable:SetValue(row, col_name, data)
      -- ”становить значение в €чейке
@@ -769,10 +769,10 @@ function QTable:AddLine()
 	self.curr_line=self.curr_line+1
     return InsertRow(self.t_id, -1)
 end
-function QTable:InsertLine(key)
-	-- добавл€ет в таблицы пустую строчку и возвращает ее номер
-	self.curr_line=self.curr_line+1
-    return InsertRow(self.t_id, key)
+function QTable:DeleteLine(key)
+	self.curr_line=self.curr_line-1
+	if key==nil then return false end
+	return DeleteRow(self.t_id,key)
 end
 function QTable:GetSize()
      -- возвращает размер таблицы, количество строк и столбцов
