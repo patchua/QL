@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.4.5.2
+Version 0.5.0.0
 
 1. function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	-- отправка лимитированной заявки
@@ -141,3 +141,36 @@ Version 0.4.5.2
 	-- возвращает текущее время компьютера в виде числа формата HHMMSS
 33. function getParam(security,param_name)
 	--вызывает стандартную функцию getParamEx. Автоматически находит код класса. возвращает значение в правильном формате. В случае ошибки возвращает диагностику вторым аргументом
+Добавлен класс для создания и удобной работы с нативными таблицами Квика QTable
+34. function QTable:new()
+     -- Создать и инициализировать экземпляр таблицы QTable
+35. function QTable:Show()
+     -- отобразить в терминале окно с созданной таблицей
+36. function QTable:IsClosed()
+     --если окно с таблицей закрыто, возвращает «true»
+37. function QTable:delete()
+     -- удалить таблицу
+38. function QTable:GetCaption()
+    -- возвращает строку, содержащую заголовок таблицы
+39. function QTable:SetCaption(s)
+     -- Задать заголовок таблицы
+40. function QTable:AddColumn(name, c_type, width, ff )
+    -- Добавить описание столбца name типа C_type в таблицу
+	-- ff – функция форматирования данных для отображения
+41. function QTable:Clear()
+     -- очистить таблицу
+42. function QTable:SetValue(row, col_name, data)
+     -- Установить значение в ячейке
+43. function QTable:AddLine()
+    -- добавляет в конец таблицы пустую строчку и возвращает ее номер
+44. function QTable:InsertLine(key)
+	-- добавляет в таблицы пустую строчку и возвращает ее номер
+45. function QTable:GetSize()
+     -- возвращает размер таблицы, количество строк и столбцов
+46. function QTable:GetValue(row, name)
+	-- Получить данные из ячейки по номеру строки и имени столбца
+47. function QTable:SetPosition(x, y, dx, dy)
+     -- Задать координаты окна
+	 -- x,y - координаты левого верхнего угла; dx,dy - ширина и высота
+48. function QTable:GetPosition()
+     -- Функция возвращает координаты окна
