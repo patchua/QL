@@ -1,5 +1,5 @@
+VERSION=0.2
 require'QL'
-require'iuplua'
 log='OptionCalculator.log'
 is_run=false
 futures_holding={}
@@ -14,17 +14,13 @@ yearLength=365
 FUTCLASSES='SPBFUT,FUTUX'
 OPRCLASSES='SPBOPT,OPTUX'
 -- GUI
-mainbox=iup.vbox{}
-dialog=iup.dialog{mainbox; title="Option Calculator", size="THIRDxTHIRD"} 
+tbl=QTable:new()
 
-
-function dialog:close_cb()
-	toLog(log,'Close dialog button pressed')
-	is_run=false
+function format2f(val)
+	return string.format('%.2f',val)
 end
-function OnClose()
-	toLog(log,'Close script button pressed')
-	is_run=false
+function format5f(val)
+	return string.format('%.5f',val)
 end
 function normalDistr(z)
 	local b1 =  0.31938153; 
@@ -119,24 +115,44 @@ end
 --quik callbacks
 function OnFuturesClientHolding(hold)
 	if is_run and hold~=nil then
-		toLog(log,'New holding update')
+		--toLog(log,'New holding update')
 		table.insert(futures_holding,hold)
 	end
+end
+function OnStop()
+	toLog(log,'Stop pressed')
+	tbl:delete()
+	is_run=false
+end
+function OnClose()
+	toLog(log,'Closing terminal')
+	is_run=false
 end
 -- our functions
 function OnInitDo()
 	log=getScriptPath()..'\\'..log
+	tbl:SetCaption('Options Portfolios Calculator '..VERSION)
+	tbl:AddColumn('Account',QTABLE_STRING_TYPE,20)
+	tbl:AddColumn('Base Contract',QTABLE_STRING_TYPE,10)
+	tbl:AddColumn('Delta',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn('Gamma(%)',QTABLE_DOUBLE_TYPE,10,format5f)
+	tbl:AddColumn('Vega',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn('Theta',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn('Rho',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn('Var Margin',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:Show()
+	--tbl:AddLine()
+	
 	local i,row
-	toLog(log,getNumberOf('futures_client_holding'))
+	--toLog(log,getNumberOf('futures_client_holding'))
 	for i=0,getNumberOf('futures_client_holding') do
 		row=getItem('futures_client_holding',i)
 		if row.trdaccid~='' and row.type==0 then
 			updatePortfoliosList(row)
-			toLog(log,"Account "..row.trdaccid.." added to data")
+			--toLog(log,"Account "..row.trdaccid.." added to data")
 		end
 	end
 	updateGUI()
-	toLog(log,gui)
 	return true
 end
 function updatePortfoliosList(position)
@@ -163,6 +179,7 @@ function updatePortfoliosList(position)
 		pl[position.trdaccid][base].rho=0
 		pl[position.trdaccid][base].phi=0
 		pl[position.trdaccid][base].zeta=0
+		pl[position.trdaccid][base].vm=position.varmargin
 		return true
 	end
 	if pl[position.trdaccid][base]==nil then
@@ -176,11 +193,13 @@ function updatePortfoliosList(position)
 		pl[position.trdaccid][base].rho=0
 		pl[position.trdaccid][base].phi=0
 		pl[position.trdaccid][base].zeta=0
+		pl[position.trdaccid][base].vm=position.varmargin
 		return true
 	end
 	if pl[position.trdaccid][base][position.seccode]==nil then
 		toLog(log,'New position for account '..position.trdaccid..' Base '..base..'. Add new node. Sec= '..position.seccode)
 		pl[position.trdaccid][base][position.seccode]=position
+		pl[position.trdaccid][base].vm=pl[position.trdaccid][base].vm+position.varmargin
 		return true
 	end
 	if pl[position.trdaccid][base][position.seccode].totalnet~=position.totalnet then
@@ -188,91 +207,15 @@ function updatePortfoliosList(position)
 		pl[position.trdaccid][base][position.seccode]=position
 		return true
 	end
-	toLog(log,'Update portfolio list ended')
+	if pl[position.trdaccid][base][position.seccode].varmargin~=position.varmargin then
+		toLog(log,'Update varmargin to '..position.varmargin..' for Acc='..position.trdaccid..' Base='..base..' Sec='..position.seccode)
+		pl[position.trdaccid][base].vm=pl[position.trdaccid][base].vm-pl[position.trdaccid][base][position.seccode].varmargin+position.varmargin
+		pl[position.trdaccid][base][position.seccode]=position
+		return true
+	end
+	--toLog(log,'Update portfolio list ended')
 	return false
 end
---[[
-function CalculatePortfolioGreeks(account,base)
-	local function create_empty(account,base_code)
-		local d=data[account][base_code]
-		d.delta=0
-		d.gamma=0
-		d.theta=0
-		d.vega=0
-		d.rho=0
-		d.phi=0
-		d.zeta=0
-	end
-	local function create_new(account,base_code)
-		toLog(log,'No '..base_code..' contract in data table')
-		data[account][base_code]={} 
-		create_empty(account,base_code)
-		local hbox
-		local d=data[account][base_code]
-		acc_lbl=iup.label{title=account,expand='YES'}
-		sec_lbl=iup.label{title=base_code,expand='YES'}
-		d.d_lbl=iup.label{title='0',expand='YES'}
-		d.g_lbl=iup.label{title='0',expand='YES'}
-		d.v_lbl=iup.label{title='0',expand='YES'}
-		d.t_lbl=iup.label{title='0',expand='YES'}
-		hbox=iup.hbox{d.acc_lbl,d.sec_lbl,d.d_lbl,d.g_lbl,d.v_lbl,d.t_lbl}
-		iup.Map(iup.Append(mainbox,hbox))
-		iup.Refresh(mainbox)
-		toLog(log,"New interface element sucessfully mapped")
-	end
-	if account==nil then toLog(log,"nil account") return end
-	toLog(log,"Start calculating portfolio greeks for account "..account)
-	local i,base,class,sprice,volat,pdtm,strike,type
-	for k,v in pairs(data[account]) do
-		create_empty(k)
-	end
-	for i=0,getNumberOf('futures_client_holding') do
-		row=getItem('futures_client_holding',i)
-		if row.trdaccid==account and row.totalnet~=0 and row.firmid=='FOUX' then 
-			toLog(log,row)
-			class=getSecurityInfo('',row.seccode).class_code
-			if string.find('SPBFUT,FUTUX',class)~=nil then
-				toLog(log,'Futures position')
-				if data[account][row.seccode]==nil then 
-					crete_new(account,row.seccode)
-				end
-				data[account][row.seccode].delta=data[account][row.seccode].delta+row.totalnet
-				data[account][row.seccode].d_lbl.title=data[account][row.seccode].delta
-			else
-				toLog(log,"Option position")
-				base=getParamEx(class,row.seccode,'optionbase').param_value
-				if data[account][base]==nil then 
-					crete_new(account,base)
-				end
-				local dat=data[account][base]
-				type=getParamEx(class,row.seccode,'optiontype').param_value
-				volat=getParamEx(class,row.seccode,'volatility').param_value/100
-				strike=getParamEx(class,row.seccode,'strike').param_value
-				sprice=getParamEx(class,row.seccode,'last').param_value
-				pdtm=getParamEx(class,row.seccode,'DAYS_TO_MAT_DATE').param_value/yearLength
-				toLog(log,row.seccode.." Position Base="..base.." type="..type..' BasePrice='..last..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
-				dat.delta=dat.delta+row.totalnet*delta(type,sprice,strike,volat,pdtm,riskFreeRate)
-				dat.gamma=dat.gamma+row.totalnet*gamma(sprice,strike,volat,pdtm,riskFreeRate)
-				dat.vega=dat.vega+row.totalnet*vega(sprice,strike,volat,pdtm,riskFreeRate)
-				dat.theta=dat.theta+row.totalnet*theta(type,sprice,strike,volat,pdtm,riskFreeRate)
-				dat.rho=dat.rho+row.totalnet*rho(type,sprice,strike,volat,pdtm,riskFreeRate)
-				dat.phi=dat.phi+row.totalnet*phi(type,sprice,strike,volat,pdtm,riskFreeRate)
-				dat.zeta=dat.zeta+row.totalnet*zeta(type,sprice,strike,volat,pdtm,riskFreeRate)
-				dat.d_lbl.title=dat.delta
-				dat.g_lbl.title=dat.gamma
-				dat.t_lbl.title=dat.theta
-				dat.v_lbl.title=dat.vega
-				toLog(log,'Position calculated. New greeks')
-				toLog(log,dat)
-				toLog(log,'----------')
-			end
-		end
-	end
-	toLog(log,'Calculation ended.')
-	toLog(log,data[account])
-	toLog(log,'------------------')
-end
-]]
 function calculateGreeks(acc,base)
 	toLog(log,'calculations started')
 	local pl=portfolios_list[acc][base]
@@ -297,7 +240,7 @@ function calculateGreeks(acc,base)
 				strike=getParam(k,'strike')
 				sprice=getParam(base,'last')
 				pdtm=getParam(k,'DAYS_TO_MAT_DATE')/yearLength
-				toLog(log,k.." Position Base="..base.." type="..opttype..' BasePrice='..sprice..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
+				--toLog(log,k.." Position Base="..base.." type="..opttype..' BasePrice='..sprice..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
 				pl.delta=pl.delta+v.totalnet*delta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				pl.gamma=pl.gamma+v.totalnet*gammap(sprice,strike,volat,pdtm,riskFreeRate)
 				pl.vega=pl.vega+v.totalnet*vega(sprice,strike,volat,pdtm,riskFreeRate)
@@ -308,42 +251,37 @@ function calculateGreeks(acc,base)
 			end
 		end
 	end
+	toLog(log,'calculations ended')
 end
 function createGUIelement(acc,base)
 	toLog(log,'Create GUI element '..acc..' '..base)
-	local t=gui[acc][base]
-	t.acc_lbl=iup.label{title=acc,expand="YES"}
-	t.base_lbl=iup.label{title=base,expand="YES"}
-	t.delta_lbl=iup.label{title='delta=',expand="YES"}
-	t.gamma_lbl=iup.label{title='gamma(%)=',expand="YES"}
-	t.theta_lbl=iup.label{title='theta=',expand="YES"}
-	t.vega_lbl=iup.label{title='vega=',expand="YES"}
-	t.rho_lbl=iup.label{title='rho=',expand="YES"}
-	--t.phi_lbl=iup.label{title='phi=',expand="YES"}
-	--t.zeta_lbl=iup.label{title='zeta=',expand="YES"}
-	hbox=iup.hbox{t.acc_lbl,t.base_lbl,t.delta_lbl,t.gamma_lbl,t.theta_lbl,t.vega_lbl,t.rho_lbl}--,t.phi_lbl,t.zeta_lbl}
-	if iup.Append(mainbox,hbox)==nil then toLog(log,"Can`t append interface element") return nil end
-	--if iup.MainLoopLevel()~=0 then
-		--toLog(log,'GUI launched. need to call Map&Refresh')
-		iup.Map(hbox)
-		iup.Refresh(mainbox)
-	--end
-	return t
+	local line=tbl:AddLine()
+	tbl:SetValue(line,'Account',acc)
+	tbl:SetValue(line,'Base Contract',base)
+	return line
 end
 function updateGUI()
-	toLog(log,'Update GUI started')
+	--toLog(log,'Update GUI started')
 	local pl=portfolios_list
 	for k,v in pairs(pl) do
 		for k1,v1 in pairs(v) do
 			if gui[k]==nil then
 				gui[k]={}
 				gui[k][k1]={}
-				gui[k][k1]=createGUIelement(k,k1)
+				gui[k][k1].line=createGUIelement(k,k1)
 			elseif gui[k][k1]==nil then
 				gui[k][k1]={}
-				gui[k][k1]=createGUIelement(k,k1)
+				gui[k][k1].line=createGUIelement(k,k1)
 			else
 				toLog(log,'Update controls')
+				local l=gui[k][k1].line
+				tbl:SetValue(l,'Delta',v1.delta)
+				tbl:SetValue(l,'Gamma',v1.gamma)
+				tbl:SetValue(l,'Theta',v1.theta)
+				tbl:SetValue(l,'Vega',v1.vega)
+				tbl:SetValue(l,'Rho',v1.rho)
+				tbl:SetValue(l,'Var Margin',v1.vm)
+				--[[
 				gui[k][k1].delta_lbl.title='delta='..string.format('%.2f',v1.delta)
 				gui[k][k1].gamma_lbl.title='gamma='..string.format('%.6f',v1.gamma)
 				gui[k][k1].theta_lbl.title='theta='..string.format('%.2f',v1.theta)
@@ -351,17 +289,17 @@ function updateGUI()
 				gui[k][k1].rho_lbl.title='rho='..string.format('%.2f',v1.rho)
 				--gui[k][k1].phi_lbl.title='phi='..string.format('%.2f',v1.phi)
 				--gui[k][k1].zeta_lbl.title='zeta='..string.format('%.2f',v1.zeta)
+				]]
 			end
 		end
 	end
-	toLog(log,'Update GUI ended')
+	--toLog(log,'Update GUI ended')
 end
 --
 function main()
 	is_run=OnInitDo()
 	if is_run then
 		toLog(log,'Main start')
-		dialog:show()
 	end
 	while is_run do
 		-- calculation`s with sleep. not callbacks
@@ -383,12 +321,8 @@ function main()
 			end
 			if res then updateGUI() end
 		else
-			iup.LoopStep()
 			sleep(1)
 		end
 	end
-	dialog:destroy()
-	iup.ExitLoop()
-	iup.Close()
 	toLog(log,'Main end')
 end
