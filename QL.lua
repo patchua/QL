@@ -799,6 +799,103 @@ function QTable:GetPosition()
      return top, left, right-left, bottom-top
 end
 --[[
+Graphics functions
+]]
+function isChartExist(chart_name)
+	-- возвращает true, если график с идентификатором chart_name сущестует иначе false
+	if chart_name==nil or chart_name=='' then return false end
+	local n=getNumCandles(chart_name)
+	if n==nil or n<1 then toLog(log,'isChartExist n='..n) return false end
+	return true
+end
+function getCandle(chart_name,bar,line)
+	-- возвращает свечу со сдвигом bar от последней существующей для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- параметр bar не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+	if not isChartExist(chart_name) then return nil,'Chart doesn`t exist' end
+	local n=getNumCandles(chart_name)
+	local lline=0
+	local lbar=n
+	if line~=nil then lline=tonumber(line) end
+	if bar~=nil then lbar=tonumber(bar) end
+	if lbar>n then return nil,'Spacified bar='..bar..' doesn`t exist' end
+	local t,n=getCandlesByIndex(chart_name,lline,lbar,1)
+	if t~=nil then return t[0] else return nil,'Error gettind Candles from '..chart_name end
+end
+function getPrevCandle(chart_name,line)
+	-- возвращает пред-последнюю свечу для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+	if not isChartExist(chart_name) then return nil,'Chart doesn`t exist' end
+	local n=getNumCandles(chart_name)
+	return getCandle(chart_name,n-1,line)
+end
+function getLastCandle(chart_name,line)
+	-- возвращает последнюю свечу для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+	return getCandle(chart_name,nil,line)
+end
+--[[
+Commmon Trading Signals
+]]
+function crossOver(bar,chart_name1,val2,parameter,line1,line2)
+	-- Возвращает true если график с идентификатором chart_name1 пересек снизу вверх график (или значение) val2 в баре bar.
+	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
+	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
+	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
+	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
+	local par=parameter or 'close'
+	toLog(log,'par='..par)
+	if type(val2)=='string' then
+		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)		
+		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
+		toLog(log,candle1l)
+		toLog(log,candle1p)
+		if candle1l[par]>candle2l[par] and candle1p[par]<=candle2p[par] then return true else return false end
+	elseif type(val2)=='number' then
+		if candle1l[par]>val2 and candle1p[par]<=val2 then return true else return false end
+	else
+		return false,'Unsupported type for 3rd parameter'
+	end
+end
+function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
+	-- Возвращает true если график с идентификатором chart_name1 пересек сверху вниз  график (или значение) val2 в баре bar.
+	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
+	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
+	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
+	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
+	local par=parameter or 'close'
+	if type(val2)=='string' then
+		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)		
+		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
+		if candle1l[par]<candle2l[par] and candle1p[par]>=candle2p[par] then return true else return false end
+	elseif type(val2)=='number' then
+		if candle1l[par]<val2 and candle1p[par]>=val2 then return true else return false end
+	else
+		return false,'Unsupported type for 3rd parameter'
+	end
+end
+function turnDown(bar,chart_name,parameter,line)
+	-- Возвращает true если график с идентификатором chart_name "развернулся вниз". Т.е. значение графика в баре bar меньше значения в баре bar-1.
+	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
+	if bar==nil or chart_name==nil then return false,'Bad parameters' end
+	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
+	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
+	local par=parameter or close
+	if candle1l[par]<candle1p[par] then return true else return false end
+end
+function turnUp(bar,chart_name,parameter,line)
+	-- Возвращает true если график с идентификатором chart_name "развернулся вверх". Т.е. значение графика в баре bar больше значения в баре bar-1.
+	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
+	if bar==nil or chart_name==nil then return false,'Bad parameters' end
+	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
+	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
+	local par=parameter or close
+	if candle1l[par]>candle1p[par] then return true else return false end
+end
+--[[
 Support Functions
 ]]--
 function getParam(security,param_name)

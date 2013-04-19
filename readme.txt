@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.5.0.0
+Version 0.5.1.0
 
 1. function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	-- отправка лимитированной заявки
@@ -174,3 +174,30 @@ Version 0.5.0.0
 	 -- x,y - координаты левого верхнего угла; dx,dy - ширина и высота
 48. function QTable:GetPosition()
      -- Функция возвращает координаты окна
+49. function isChartExist(chart_name)
+	-- возвращает true, если график с идентификатором chart_name сущестует иначе false
+50. function getCandle(chart_name,bar,line)
+	-- возвращает свечу со сдвигом bar от последней существующей для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- параметр bar не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+51. function getPrevCandle(chart_name,line)
+	-- возвращает пред-последнюю свечу для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+52. function getLastCandle(chart_name,line)
+	-- возвращает последнюю свечу для графика с идентификатором chart_name
+	-- параметр line не обязательный (по умолчанию 0)
+	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
+53. function crossOver(bar,chart_name1,val2,parameter,line1,line2)
+	-- Возвращает true если график с идентификатором chart_name1 пересек снизу вверх график (или значение) val2 в баре bar.
+	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
+54. function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
+	-- Возвращает true если график с идентификатором chart_name1 пересек сверху вниз  график (или значение) val2 в баре bar.
+	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
+55. function turnDown(bar,chart_name,parameter,line)
+	-- Возвращает true если график с идентификатором chart_name "развернулся вниз". Т.е. значение графика в баре bar меньше значения в баре bar-1.
+	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
+56. function turnUp(bar,chart_name,parameter,line)
+	-- Возвращает true если график с идентификатором chart_name "развернулся вверх". Т.е. значение графика в баре bar больше значения в баре bar-1.
+	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
