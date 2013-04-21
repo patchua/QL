@@ -1,4 +1,4 @@
---Version='0.5.0.0'
+--Version='0.5.1.0'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -212,6 +212,55 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		transaction['EXPIRY_DATE']=exp_date
 	end
 	if comment~=nil then
+		transaction.comment=string.sub(tostring(comment),0,20)
+	else
+		transaction.comment='QL'
+	end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil, "QL.sendStop():"..res
+	else
+		return trans_id, "QL.sendStop(): Stop-order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." StopPrice="..stopprice.." DealPrice="..dealprice.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+	end
+end
+function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoffset,defspread,account,exp_date,client_code,comment)
+	-- отправка простой стоп-заявки
+	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
+	-- если код клиента нил - подлставляем счет
+	-- если время жизни не указано - то заявка "До Отмены"
+	-- Данная функция возвращает 2 параметра 
+	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
+	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
+	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
+		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
+	local trans_id=math.random(2000000000)
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="NEW_STOP_ORDER",
+		["CLASSCODE"]=class,
+		["SECCODE"]=security,
+		["OPERATION"]=direction,
+		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["STOPPRICE"]=toPrice(security,stopprice),
+		["PRICE"]=toPrice(security,dealprice),
+		["ACCOUNT"]=tostring(account)
+	}
+	if client_code==nil then
+		transaction.client_code=tostring(account)
+	else
+		transaction.client_code=tostring(client_code)
+	end
+	if exp_date==nil then
+		transaction["EXPIRY_DATE"]="GTC"
+	else
+		transaction['EXPIRY_DATE']=exp_date
+	end
+	if comment~=nil then
 		transaction.comment=tostring(comment)
 		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
 	else
@@ -225,8 +274,58 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		return trans_id, "QL.sendStop(): Stop-order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." StopPrice="..stopprice.." DealPrice="..dealprice.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
 end
-function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoffset,defspread,exp_date,account,clientcode)
-	
+function sendTake(class,security,direction,price,volume,offset,offsetunits,deffspread,deffspreadunits,account,exp_date,client_code,comment)
+	-- отправка простой стоп-заявки
+	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
+	-- если код клиента нил - подлставляем счет
+	-- если время жизни не указано - то заявка "До Отмены"
+	-- Данная функция возвращает 2 параметра 
+	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
+	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
+	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or offset==nil or offsetunits==nil or deffspread==nil or deffspreadunits==nil) then
+		return nil,"QL.sendTake(): Can`t send order. Nil parameters."
+	end
+	if NOTRANDOMIZED then
+		math.randomseed(socket.gettime())
+		NOTRANDOMIZED=false
+	end
+	local trans_id=math.random(2000000000)
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="NEW_STOP_ORDER",
+		["CLASSCODE"]=class,
+		["SECCODE"]=security,
+		["STOP_ORDER_KIND"]='TAKE_PROFIT_STOP',
+		["OPERATION"]=direction,
+		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["STOPPRICE"]=toPrice(security,price),
+		["OFFSET_UNITS"]=offsetunits,
+		["SPREAD_UNITS"]=deffspreadunits,
+		["OFFSET"]=tonumber(offset),
+		["SPREAD"]=tonumber(deffspread),
+		["ACCOUNT"]=tostring(account)
+	}
+	if client_code==nil then
+		transaction.client_code=tostring(account)
+	else
+		transaction.client_code=tostring(client_code)
+	end
+	if exp_date==nil then
+		transaction["EXPIRY_DATE"]="GTC"
+	else
+		transaction['EXPIRY_DATE']=exp_date
+	end
+	if comment~=nil then
+		transaction.comment=string.sub(tostring(comment),0,20)
+	else
+		transaction.comment='QL'
+	end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil, "QL.sendTake():"..res
+	else
+		return trans_id, "QL.sendTake(): Take-profit sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Offset="..offset..' OffsetUnits='..offsetunits..' Spread='..deffspread..' SpreadUnits='..deffspreadunits.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+	end
 end
 function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	-- перемещение заявки
@@ -816,11 +915,11 @@ function getCandle(chart_name,bar,line)
 	if not isChartExist(chart_name) then return nil,'Chart doesn`t exist' end
 	local n=getNumCandles(chart_name)
 	local lline=0
-	local lbar=n
+	local lbar=n-1
 	if line~=nil then lline=tonumber(line) end
 	if bar~=nil then lbar=tonumber(bar) end
 	if lbar>n then return nil,'Spacified bar='..bar..' doesn`t exist' end
-	local t,n=getCandlesByIndex(chart_name,lline,lbar,1)
+	local t,n,p=getCandlesByIndex(chart_name,lline,lbar,1)
 	if t~=nil then return t[0] else return nil,'Error gettind Candles from '..chart_name end
 end
 function getPrevCandle(chart_name,line)
@@ -829,7 +928,7 @@ function getPrevCandle(chart_name,line)
 	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
 	if not isChartExist(chart_name) then return nil,'Chart doesn`t exist' end
 	local n=getNumCandles(chart_name)
-	return getCandle(chart_name,n-1,line)
+	return getCandle(chart_name,n-2,line)
 end
 function getLastCandle(chart_name,line)
 	-- возвращает последнюю свечу для графика с идентификатором chart_name
@@ -906,7 +1005,7 @@ function getParam(security,param_name)
 	if t.param_type=='3' then
 		return t.param_image
 	else
-		return t.param_value
+		return tonumber(t.param_value)
 	end
 end
 function toLog(file_path,value)
@@ -988,7 +1087,7 @@ function orderflags2table(flags)
 	local t={}
 	local band=bit.band
 	local tobit=bit.tobit
-	if band(tobit(flags), 0x1)~=0 then t.active=true	else t.active = false end
+	if band(tobit(flags),0x1)~=0 then t.active=true	else t.active = false end
 	if band(tobit(flags),0x2)~=0 then t.cancelled=true 
 	else	
 		if not t.active then t.done=true else t.done=false end
@@ -1037,7 +1136,7 @@ function stoporderflags2table(flags)
 		t.cancelled=false
 	end
 	if band(tobit(flags), 0x4) then t.operation="S" else t.operation = "B" end
-	if band(tobit(flags), 3) then t.limit=true else t.limit = false end
+	if band(tobit(flags), 0x8) then t.limit=true else t.limit = false end
 	if band(tobit(flags),0x20) then t.wait_activation=true else t.wait_activation=false end
 	if band(tobit(flags),0x40) then t.another_server=true else t.another_server=false end
 	if band(tobit(flags),0x100) then t.tplopf=true else t.tplopf=false end
