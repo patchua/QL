@@ -52,9 +52,9 @@ function main()
 		end
 		
 		--Детектор тренда
-		if turnUp(chart1) and turnUp(chart2) then
+		if turnUp(n_chart1-1,chart1) and turnUp(n_chart2-1,chart2) then
 			TREND_DETECTOR="Оба мувинга растут. Рынок быков" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
-		elseif turnDown(chart1) and turnDown(chart2) then
+		elseif turnDown(n_chart1-1,chart1) and turnDown(n_chart2-1,chart2) then
 			TREND_DETECTOR="Оба мувинга падают. Рынок медведей" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
 		else
 			TREND_DETECTOR="Нет выраженного тренда"

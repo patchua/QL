@@ -738,6 +738,7 @@ function killAllStopOrders(table_mask)
 end
 function getPosition(security,account)
     --возвращает чистую позицию по инструменту
+	-- для срочного рынка передаем номер счета, для спот-рынка код-клиента
 	local class_code=getSecurityInfo("",security).class_code
     if string.find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
@@ -753,11 +754,11 @@ function getPosition(security,account)
 		end
 	else
 	-- spot
-		toLog(log,'posnum='..getNumberOf("depo_limits"))
+		--toLog(log,'posnum='..getNumberOf("depo_limits"))
 		for i=0,getNumberOf("depo_limits") do
 			local row=getItem("depo_limits",i)
 			toLog(log,row)
-			if row~=nil and row.seccode==security and row.trdaccid==account then
+			if row~=nil and row.seccode==security and row.client_code==account then
 				if row.currentbal==nil then
 					return 0
 				else
@@ -950,8 +951,6 @@ function crossOver(bar,chart_name1,val2,parameter,line1,line2)
 	if type(val2)=='string' then
 		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)		
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
-		toLog(log,candle1l)
-		toLog(log,candle1p)
 		if candle1l[par]>candle2l[par] and candle1p[par]<=candle2p[par] then return true else return false end
 	elseif type(val2)=='number' then
 		if candle1l[par]>val2 and candle1p[par]<=val2 then return true else return false end
@@ -982,7 +981,7 @@ function turnDown(bar,chart_name,parameter,line)
 	if bar==nil or chart_name==nil then return false,'Bad parameters' end
 	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
-	local par=parameter or close
+	local par=parameter or "close"
 	if candle1l[par]<candle1p[par] then return true else return false end
 end
 function turnUp(bar,chart_name,parameter,line)
@@ -991,12 +990,16 @@ function turnUp(bar,chart_name,parameter,line)
 	if bar==nil or chart_name==nil then return false,'Bad parameters' end
 	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
-	local par=parameter or close
+	local par=parameter or "close"
 	if candle1l[par]>candle1p[par] then return true else return false end
 end
 --[[
 Support Functions
 ]]--
+function getClass(security)
+	-- возвращает класс для бумаги security
+	return getSecurityInfo('',security).class_code
+end
 function getParam(security,param_name)
 	--вызывает стандартную функцию getParamEx. Автоматически находит код класса. возвращает значение в правильном формате. В случае ошибки возвращает диагностику вторым аргументом
 	if security==nil or security=='' or param_name==nil or param_name=='' then return nil,'Bad arguments' end
