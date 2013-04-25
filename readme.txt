@@ -201,3 +201,5 @@ Version 0.5.1.0
 56. function turnUp(bar,chart_name,parameter,line)
 	-- Возвращает true если график с идентификатором chart_name "развернулся вверх". Т.е. значение графика в баре bar больше значения в баре bar-1.
 	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
+57. function getClass(security)
+	-- возвращает класс для бумаги security

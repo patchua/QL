@@ -11,7 +11,6 @@ is_run = true
 function OnStop()
   is_run = false
   toLog(log,'OnStop. Script finished manually')
-  message ("Скрипт остановлен вручную", 2)
   -- уничтожаем таблицу Квик
   t:delete()
 end
@@ -36,7 +35,8 @@ function main()
 
 		--обращаемся к короткому мувингу
 		n_chart1 = getNumCandles (chart1)
-		if n_chart1==0 or n_chart1==nil then
+		toLog(log,'chart1 num='..n_chart1)
+		if not isChartExist(chart1) then
 			toLog(log,'Can`t get data from chart '..chart1)
 			message('Не можем получить данные с графика '..chart1,1)
 			is_run=false
@@ -44,28 +44,17 @@ function main()
 		end
 		--обращаемся к длинному мувингу
 		n_chart2 = getNumCandles(chart2)
-		if n_chart2==0 or n_chart2==nil then
+		if not isChartExist(chart2) then
 			toLog(log,'Can`t get data from chart '..chart2)
 			message('Не можем получить данные с графика '..chart2,1)
 			is_run=false
 			break
 		end
-		--получаем предыдущее значение короткого мувинга
-		short_mov1 = getCandlesByIndex(chart1,0,n_chart1-2,1)[0].close
-
-		--получаем позапредыдущее значение короткого мувинга
-		short_mov2 = getCandlesByIndex(chart1,0,n_chart2-3,1)[0].close
-	  
-		--получаем предыдущее значение длинного мувинга
-		long_mov1 = getCandlesByIndex(chart2,0,n_chart2-2,1)[0].close
-
-		--получаем позапредыдущее значение длинного   мувинга
-		long_mov2 = getCandlesByIndex(chart2,0,n_chart2-3,1)[0].close
-
+		
 		--Детектор тренда
-		if short_mov1>short_mov2 and long_mov1>long_mov2 then
+		if turnUp(n_chart1-1,chart1) and turnUp(n_chart2-1,chart2) then
 			TREND_DETECTOR="Оба мувинга растут. Рынок быков" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
-		elseif short_mov1<short_mov2 and long_mov1<long_mov2 then
+		elseif turnDown(n_chart1-1,chart1) and turnDown(n_chart2-1,chart2) then
 			TREND_DETECTOR="Оба мувинга падают. Рынок медведей" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
 		else
 			TREND_DETECTOR="Нет выраженного тренда"
@@ -74,12 +63,12 @@ function main()
 		--Генерация сигналов.
 
 		--Золотой крест
-		if short_mov1>long_mov1 and short_mov2<long_mov2 then
+		if crossOver(n_chart1-1,chart1,chart2) then
 			iup.Message('Новый сигнал!','ЗОЛОТОЙ КРЕСТ')	
 			toLog (log, "Golden Cross detected")
 			SIGNAL="GOLDEN CROSS" --выводим в таблицу КВИКа.
 		--Мёртвый крест
-		elseif short_mov1<long_mov1 and short_mov2>long_mov2 then
+		elseif crossUnder(n_chart1-1,chart1,chart2) then
 			iup.Message('Новый сигнал!','МЁРТВЫЙ КРЕСТ')	
 			toLog (log, "Dead Cross detected")
 			SIGNAL="DEAD CROSS" --выводим в таблицу КВИКа.
@@ -93,5 +82,6 @@ function main()
 		sleep(1000)
 	end
 	toLog(log,"Main ended")
+	iup.ExitLoop()
 	iup.Close()
 end
