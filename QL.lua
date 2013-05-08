@@ -1177,7 +1177,7 @@ function bit_set( flags, index )
 	--функция возвращает true, если бит [index] установлен в 1
 	local n=1
     n=bit.lshift(1, index)
-    if bit.band(flags, n) ~=0 then
+    if bit.band(flags, n)~=0 then
        return true
     else
        return false
@@ -1284,8 +1284,8 @@ function isTradeTime(exchange, shift)
 	local time=getSTime()
 	local sp=0
 	if shift~=nil then sp=tonumber(shift) end
-	if (exchange=='UX' or exchange=='MICEX') and time+sp>103000 and time+sp<173000 then return true else return false end
-	if exchange=='FORTS' and ((time+sp>100000 and time+sp<140000) or (time+sp>140300 and time+sp<184500) or (time+sp>190000 and time+sp<235000)) then return true else return false end
+	if (exchange=='UX' or exchange=='MICEX') and time+sp>103000 and time+sp<173000 then return true end
+	if exchange=='FORTS' and ((time+sp>100000 and time+sp<140000) or (time+sp>140300 and time+sp<184500) or (time+sp>190000 and time+sp<235000)) then return true end
 	return false
 end
 function datetime2string(dt)
