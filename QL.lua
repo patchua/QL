@@ -5,6 +5,8 @@ package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.
 require"bit"
 require"socket"
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
+DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
+DATETIME_MAX_VALUE={['day']=31,['week_day']=7,['hour']=23,['ms']=999,['min']=59,['month']=12,['sec']=59,['year']=9999}
 NOTRANDOMIZED=true
 --[[
 Trading Module
@@ -1323,4 +1325,9 @@ function isSubTable(sub,main)
         end
     end
 	return true
+end
+function datetimediff(t1,t2)
+	-- возвращает разницу в секундах между t2 и t1 (оба стандартного типа datetime библиотеки qlua)
+	return (((((t2.year-t1.year)*12+t2.month-t1.month)*30+t2.day-t1.day)*24+t2.hour-t1.hour)*60+t2.min-t1.min)*60+t2.sec-t1.sec
+	--return math.abs(d)
 end

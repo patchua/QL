@@ -203,3 +203,5 @@ Version 0.5.1.1
 	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
 57. function getClass(security)
 	-- возвращает класс для бумаги security
+58. function datetimediff(t1,t2)
+	-- возвращает разницу в секундах между t2 и t1 (оба стандартного типа datetime библиотеки qlua)
