@@ -1,4 +1,4 @@
---Version='0.5.1.0'
+--Version='0.5.1.1'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -895,8 +895,18 @@ function QTable:SetPosition(x, y, dx, dy)
 end
 function QTable:GetPosition()
      -- Функция возвращает координаты окна
-	 top, left, bottom, right = GetWindowRect(self.t_id)
+	 local top, left, bottom, right = GetWindowRect(self.t_id)
      return top, left, right-left, bottom-top
+end
+function QTable:SetSizeSuitable(a,b)
+   -- Функция меняет размер окна таблицы в соответствии с текущем количеством отображаемых строк
+   if a==nil then a=42 end
+   if b==nil then b=15 end
+   local top, left, bottom, right = GetWindowRect(self.t_id)
+   self.x, self.y, self.dx, self.dy = top, left, right-left, bottom-top
+   self.rows, self.cols = GetTableSize(self.t_id)
+   self.dy=a+self.rows*b
+   return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
 --[[
 Graphics functions

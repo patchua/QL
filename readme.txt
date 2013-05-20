@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.5.1.0
+Version 0.5.1.1
 
 1. function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	-- отправка лимитированной заявки
