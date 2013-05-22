@@ -9,8 +9,8 @@ require("QL")
 
 log="Costs_Counter.log"
 
-spot_comission=0,0007
-fut_comission=1,85
+spot_comission=0.0007
+fut_comission=1.85
 
 is_run=false
 trades={} -- "транспортная" таблица для сделок. С ее помощью мы будем обрабатывать данные не в коллбэке Квика а в главном потоке ВМ Луа
@@ -32,28 +32,32 @@ function OnTrade(trade)
 end
 
 function CountandAdd(trade)
-	local l,op,bc,rc=t:AddLine(),'',0,0
+	local l,op,bc,rp,qty=t:AddLine(),'',0,0,0
 	t:SetValue(l,'Time',datetime2string(trade.datetime))
 	t:SetValue(l,'Account',trade.account)
 	t:SetValue(l,'Client_code',trade.client_code)
 	t:SetValue(l,'Security',trade.sec_code)
+	if trade.class_code=='GTS' then
+		qty=trade.qty
+	else
+		qty=trade.qty*getParam(trade.sec_code,'LOTSIZE')
+	end
+	if string.find(FUT_OPT_CLASSES,trade.class_code)~=nil then bc=qty*fut_comission else bc=trade.value*spot_comission end
 	if tradeflags2table(trade.flags).operation=='S' then 
-		op='Продажа' 
-		rp=(trade.value-trade.exchange_comission-bc)/trade.qty
+		op='Buy' 
+		rp=(trade.value-trade.exchange_comission-bc)/qty
 	else 
-		rp=(trade.value+trade.exchange_comission+bc)/trade.qty
-		op='Покупка' 
+		rp=(trade.value+trade.exchange_comission+bc)/qty
+		op='Sell' 
 	end
 	t:SetValue(l,'Operation',op)
 	t:SetValue(l,'Deal_price',trade.price)
-	t:SetValue(l,'Quantity',trade.qty)
+	t:SetValue(l,'Quantity',qty)
 	t:SetValue(l,'Volume',trade.value)
 	t:SetValue(l,'Stock_comission',trade.exchange_comission)
-	toLog(log,'Exch com='..trade.exchange_comission)
-	if string.find(FUT_OPT_CLASSES,trade.class_code)~=nil then bc=trade.qty*fut_comission else bc=trade.value*spot_comission end
 	t:SetValue(l,'Broker_comission',bc)
 	t:SetValue(l,'Full_comission',(trade.exchange_comission+bc))
-	t:SetValue(l,'Real_price',rc)
+	t:SetValue(l,'Real_price',rp)
 end
 
 function main()
@@ -62,9 +66,9 @@ function main()
 	t:AddColumn("Account",QTABLE_STRING_TYPE,20)
 	t:AddColumn("Client_code",QTABLE_STRING_TYPE,20)
 	t:AddColumn("Security",QTABLE_STRING_TYPE,20)
-	t:AddColumn("Operation",QTABLE_STRING_TYPE,20)
-	t:AddColumn("Deal_price",QTABLE_DOUBLE_TYPE ,20)	
-	t:AddColumn("Quantity",QTABLE_DOUBLE_TYPE,20)
+	t:AddColumn("Operation",QTABLE_STRING_TYPE,5)
+	t:AddColumn("Deal_price",QTABLE_DOUBLE_TYPE ,15)	
+	t:AddColumn("Quantity",QTABLE_DOUBLE_TYPE,15)
 	t:AddColumn("Volume",QTABLE_DOUBLE_TYPE,20)
 	t:AddColumn("Stock_comission",QTABLE_DOUBLE_TYPE,20)
 	t:AddColumn("Broker_comission",QTABLE_DOUBLE_TYPE,20)

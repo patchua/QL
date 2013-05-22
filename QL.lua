@@ -1126,9 +1126,7 @@ function tradeflags2table(flags)
 	local t={}
 	local band=bit.band
 	local tobit=bit.tobit
-	if band(tobit(flags), 0x1)~=0 then t.operation="S" return t end
-	if band(tobit(flags), 0x2)~=0 then t.operation="B" return t end
-	t.operation=""
+	if band(tobit(flags), 0x4)~=0 then t.operation="S" else t.operation='B' end
 	return t
 end
 function stoporderflags2table(flags)
