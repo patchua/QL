@@ -336,9 +336,9 @@ function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if (fo_number==nil or fo_p==nil or mode==nil) then
 		return nil,"QL.moveOrder(): Can`t move order. Nil parameters."
 	end
-	local forder=getRowFromTable("orders","ordernum",fo_number)
+	local forder=getRowFromTable("orders","order_num",fo_number)
 	if forder==nil then
-		return nil,"QL.moveOrder(): Can`t find ordernumber="..fo_number.." in orders table!"
+		return nil,"QL.moveOrder(): Can`t find order_number="..fo_number.." in orders table!"
 	end
 	if string.find(FUT_OPT_CLASSES,forder.class_code)~=nil then
 		return moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
@@ -356,9 +356,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if (fo_number==nil or fo_p==nil) then
 		return nil,"QL.moveOrderSpot(): Can`t move order. Nil parameters."
 	end
-	local forder=getRowFromTable("orders","ordernum",fo_number)
+	local forder=getRowFromTable("orders","order_num",fo_number)
 	if forder==nil then
-		return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..fo_number.." in orders table!"
+		return nil,"QL.moveOrderSpot(): Can`t find order_number="..fo_number.." in orders table!"
 	end
 	if (orderflags2table(forder.flags).cancelled or (orderflags2table(forder.flags).done and forder.balance==0)) then
 		return nil,"QL.moveOrderSpot(): Can`t move cancelled or done order!"
@@ -370,9 +370,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
 			--toLog("ko.txt",ms)
 			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
-			local sorder=getRowFromTable("orders","ordernum",so_number)
+			local sorder=getRowFromTable("orders","order_num",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
 			_,ms=killOrder(so_number,sorder.seccode,sorder.class_code)
 			--toLog("ko.txt",ms)
@@ -398,9 +398,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		if so_number~=nil and so_p~=nil and so_q~=nil then
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
-			local sorder=getRowFromTable("orders","ordernum",so_number)
+			local sorder=getRowFromTable("orders","order_num",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
 			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
@@ -422,9 +422,9 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если MODE=2,  то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
 		--Если количество бумаг в каждой из снятых заявок совпадает со значениями, указанными после FIRST_ORDER_NEW_QUANTITY и SECOND_ORDER_NEW_QUANTITY, то в торговую систему отправляются две новые заявки с соответствующими параметрами.
 		if so_number~=nil and so_p~=nil and so_q~=nil then
-			local sorder=getRowFromTable("orders","ordernum",so_number)
+			local sorder=getRowFromTable("orders","order_num",so_number)
 			if sorder==nil then
-				return nil,"QL.moveOrderSpot(): Can`t find ordernumber="..so_number.." in orders table!"
+				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
 			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
 			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
@@ -503,9 +503,9 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math.random(2000000000)
-	local order=getRowFromTable("orders","ordernum",fo_number)
+	local order=getRowFromTable("orders","order_num",fo_number)
 	if order==nil then
-		return nil,"QL.moveOrderFO(): Can`t find ordernumber="..fo_number.." in orders table!"
+		return nil,"QL.moveOrderFO(): Can`t find order_number="..fo_number.." in orders table!"
 	end
 	transaction["TRANS_ID"]=tostring(trans_id)
 	transaction["CLASSCODE"]=order.class_code
@@ -598,7 +598,7 @@ function killOrder(orderkey,security,class)
 		["ORDER_KEY"]=tostring(orderkey)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
-		local order=getRowFromTable("orders","ordernum",orderkey)
+		local order=getRowFromTable("orders","order_num",orderkey)
 		if order==nil then return nil,"QL.killOrder(): Can`t kill order. No such order in Orders table." end
 		transaction.classcode=order.class_code
 		transaction.seccode=order.seccode
@@ -636,7 +636,7 @@ function killStopOrder(orderkey,security,class)
 		["STOP_ORDER_KEY"]=tostring(orderkey)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
-		local order=getRowFromTable("stop_orders","ordernum",orderkey)
+		local order=getRowFromTable("stop_orders","order_num",orderkey)
 		if order==nil then return nil,"QL.killStopOrder(): Can`t kill order. No such order in StopOrders table." end
 		transaction.classcode=order.class_code
 		transaction.seccode=order.seccode
@@ -667,7 +667,7 @@ function killAllOrders(table_mask)
 	for i=0,getNumberOf("orders"),1 do
 		row=getItem("orders",i)
 		tokill=false
-		--toLog(log,"Row "..i.." onum="..row.ordernum)
+		--toLog(log,"Row "..i.." onum="..row.order_num)
 		if orderflags2table(row.flags).active then
 			tokill=true
 			--toLog(log,"acitve")
@@ -684,18 +684,18 @@ function killAllOrders(table_mask)
 			end
 		end
 		if tokill then
-			--toLog(log,"kill onum"..row.ordernum)
-			res,ms=killOrder(tostring(row.ordernum),row.seccode,row.class_code)
+			--toLog(log,"kill onum"..row.order_num)
+			res,ms=killOrder(tostring(row.order_num),row.seccode,row.class_code)
 			result_num=result_num+1
 			--toLog(log,ms)
 			if res then
-				result_str=result_str..row.ordernum..","
+				result_str=result_str..row.order_num..","
 			else
-				result_str=result_str.."!"..row.ordernum..","
+				result_str=result_str.."!"..row.order_num..","
 			end
 		end
 	end
-	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
+	return true,"QL.killAllOrders(): Sended "..result_num.." transactions. order_nums:"..result_str
 end
 function killAllStopOrders(table_mask)
 	-- данная функция отправит транзакции на отмену АКТИВНЫХ стоп-заявок соответствующим фильтру указанному как входящий параметр table_mask
@@ -708,7 +708,7 @@ function killAllStopOrders(table_mask)
 	for i=0,getNumberOf("stop_orders"),1 do
 		row=getItem("stop_orders",i)
 		tokill=false
-		--toLog(log,"Row "..i.." onum="..row.ordernum)
+		--toLog(log,"Row "..i.." onum="..row.order_num)
 		if stoporderflags2table(row.flags).active then
 			tokill=true
 			--toLog(log,"acitve")
@@ -725,18 +725,18 @@ function killAllStopOrders(table_mask)
 			end
 		end
 		if tokill then
-			--toLog(log,"kill onum"..row.ordernum)
-			res,ms=killStopOrder(tostring(row.ordernum),row.seccode,row.class_code)
+			--toLog(log,"kill onum"..row.order_num)
+			res,ms=killStopOrder(tostring(row.order_num),row.seccode,row.class_code)
 			result_num=result_num+1
 			--toLog(log,ms)
 			if res then
-				result_str=result_str..row.ordernum..","
+				result_str=result_str..row.order_num..","
 			else
-				result_str=result_str.."!"..row.ordernum..","
+				result_str=result_str.."!"..row.order_num..","
 			end
 		end
 	end
-	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. Ordernums:"..result_str
+	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. order_nums:"..result_str
 end
 function getPosition(security,account)
     --возвращает чистую позицию по инструменту
@@ -917,7 +917,7 @@ function isChartExist(chart_name)
 	-- возвращает true, если график с идентификатором chart_name сущестует иначе false
 	if chart_name==nil or chart_name=='' then return false end
 	local n=getNumCandles(chart_name)
-	if n==nil or n<1 then toLog(log,'isChartExist n='..n) return false end
+	if n==nil or n<1 then return false end
 	return true
 end
 function getCandle(chart_name,bar,line)

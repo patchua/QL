@@ -214,7 +214,7 @@ end
 function OnParam(cl,sec)
 	if is_run and cl==class and sec==security and last~=getParam(security,'LAST') then
 		last=getParam(security,'LAST')
-		toLog(log,'type='..type(last))
+		--toLog(log,'type='..type(last))
 		table.insert(newlast,last)
 	end
 end
