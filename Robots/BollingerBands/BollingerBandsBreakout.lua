@@ -3,7 +3,7 @@ require 'luaxml'
 require 'iuplua'
 
 VERSION='0.1'
-log='BB.log'
+log='full_BB.log'
 set_path='settings.xml'
 is_run=false
 security=''
@@ -75,15 +75,16 @@ function OnInitDo()
 	file:save(set_path)
 	security=file:find("security").value
 	class=getSecurityInfo('',security).class_code
+	minstep=getParam(security,"SEC_PRICE_STEP")
 	volume=tonumber(file:find("volume").value)
-	slippage=tonumber(file:find("slippage").value)
-	take=tonumber(file:find("take").value)
-	stop=tonumber(file:find("stop").value)
+	slippage=tonumber(file:find("slippage").value)*minstep
+	take=tonumber(file:find("take").value)*minstep
+	stop=tonumber(file:find("stop").value)*minstep
 	acc=file:find("account").value
 	clc=file:find("clientcode").value
 	chart=file:find("graphname").value
-	stop_slippage=tonumber(file:find("stopslippage").value)
-	minstep=getParam(security,"SEC_PRICE_STEP")
+	stop_slippage=tonumber(file:find("stopslippage").value)*minstep
+	
 	if not isChartExist(chart) then
 		toLog(log,'Chart doesn`t exist') 
 		iup.Message("Bollinger Bands Breakout "..VERSION,"График не может быть найден")
@@ -152,8 +153,8 @@ function OnTradeDo(trade)
 		toLog(log,"New trade for open order#"..trade.order_num..'. Trade#'..trade.trade_num..' Qty='..trade.qty)
 		open_price=(open_price*open_vol+trade.qty*trade.price)/(open_vol+trade.qty)
 		open_vol=open_vol+trade.qty
-		if open_vol==getOrderByNumber(clas,trade.order_num).qty then
-			--position openned. send take&stop
+		if open_vol==getOrderByNumber(class,trade.order_num).qty then
+			--position opennd.e send take&stop
 			if orders_to_process[trade.ordernum]=='S' then
 				sdir='B'
 				smul=1
@@ -183,9 +184,9 @@ end
 function OnNewLastDo(lastprice)
 	if not position then
 		toLog(log,'Check to open. New Last='..lastprice)
-		--toLog(log,'line1='..getLastCandle(chart,1).close)
-		--toLog(log,'closetype='..type(getLastCandle(chart,1).close)..' slip='..type(lippage)..' last='..type(lastprice))
-		--toLog(log,'line0='..getLastCandle(chart,0).close)
+		toLog(log,'line1='..getLastCandle(chart,1).close)
+		toLog(log,'closetype='..type(getLastCandle(chart,1).close)..' slip='..type(slippage)..' last='..type(lastprice))
+		toLog(log,'line0='..getLastCandle(chart,0).close)
 		if getLastCandle(chart,1).close+slippage<lastprice then
 			--sell
 			local tr,res=sendMarket(class,security,"S",volume,acc,clc,'BBbsell')
