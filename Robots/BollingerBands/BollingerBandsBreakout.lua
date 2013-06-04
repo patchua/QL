@@ -73,6 +73,9 @@ function OnInitDo()
 		return false
 	end
 	file:save(set_path)
+	toLog(log,'Settings file------')
+	toLog(log,file)
+	toLog(log,'------------')
 	security=file:find("security").value
 	class=getSecurityInfo('',security).class_code
 	minstep=getParam(security,"SEC_PRICE_STEP")
@@ -84,7 +87,7 @@ function OnInitDo()
 	clc=file:find("clientcode").value
 	chart=file:find("graphname").value
 	stop_slippage=tonumber(file:find("stopslippage").value)*minstep
-	
+	toLog(log,'Settings: sec='..security..' cl='..class..' minstep='..minstep..' vol='..volume..' slip='..slippage..' take='..take..' stop='..stop..' stopslip='..stop_slippage)
 	if not isChartExist(chart) then
 		toLog(log,'Chart doesn`t exist') 
 		iup.Message("Bollinger Bands Breakout "..VERSION,"График не может быть найден")
