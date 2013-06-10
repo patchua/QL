@@ -297,7 +297,7 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		["ACTION"]="NEW_STOP_ORDER",
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
-		["STOP_ORDER_KIND"]='TAKE_PROFIT_STOP',
+		["STOP_ORDER_KIND"]='TAKE_PROFIT_STOP_ORDER',
 		["OPERATION"]=direction,
 		["QUANTITY"]=string.format("%d",tostring(volume)),
 		["STOPPRICE"]=toPrice(security,price),
