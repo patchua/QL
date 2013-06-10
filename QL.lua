@@ -1142,23 +1142,23 @@ function stoporderflags2table(flags)
 	local t={}
 	local band=bit.band
 	local tobit=bit.tobit
-	if band(tobit(flags), 0x1) then t.active=true	else t.active = false end
-	if band(tobit(flags),0x2) then t.cancelled=true 
+	if band(tobit(flags), 0x1)~=0 then t.active=true else t.active = false end
+	if band(tobit(flags),0x2)~=0 then t.cancelled=true 
 	else	
 		if not t.active then t.done=true else t.done=false end
 		t.cancelled=false
 	end
-	if band(tobit(flags), 0x4) then t.operation="S" else t.operation = "B" end
-	if band(tobit(flags), 0x8) then t.limit=true else t.limit = false end
-	if band(tobit(flags),0x20) then t.wait_activation=true else t.wait_activation=false end
-	if band(tobit(flags),0x40) then t.another_server=true else t.another_server=false end
-	if band(tobit(flags),0x100) then t.tplopf=true else t.tplopf=false end
-	if band(tobit(flags),0x200) then t.manually_activated=true else t.manually_activated=false end
-	if band(tobit(flags),0x400) then t.rejected=true else t.rejected=false end
-	if band(tobit(flags),0x800) then t.rejected_limits=true else t.rejected_limits=false end
-	if band(tobit(flags),0x1000) then t.cdtloc=true else t.cdtlo=false end
-	if band(tobit(flags),0x2000) then t.cdtloe=true else t.cdtloe=false end
-	if band(tobit(flags),0x8000) then t.minmaxcalc=true else t.minmaxcalc=false end
+	if band(tobit(flags), 0x4)~=0 then t.operation="S" else t.operation = "B" end
+	if band(tobit(flags), 0x8)~=0 then t.limit=true else t.limit = false end
+	if band(tobit(flags),0x20)~=0 then t.wait_activation=true else t.wait_activation=false end
+	if band(tobit(flags),0x40)~=0 then t.another_server=true else t.another_server=false end
+	if band(tobit(flags),0x100)~=0 then t.tplopf=true else t.tplopf=false end
+	if band(tobit(flags),0x200)~=0 then t.manually_activated=true else t.manually_activated=false end
+	if band(tobit(flags),0x400)~=0 then t.rejected=true else t.rejected=false end
+	if band(tobit(flags),0x800)~=0 then t.rejected_limits=true else t.rejected_limits=false end
+	if band(tobit(flags),0x1000)~=0 then t.cdtloc=true else t.cdtlo=false end
+	if band(tobit(flags),0x2000)~=0 then t.cdtloe=true else t.cdtloe=false end
+	if band(tobit(flags),0x8000)~=0 then t.minmaxcalc=true else t.minmaxcalc=false end
 	return t
 end
 function stoporderextflags2table(flags)
@@ -1172,15 +1172,15 @@ function stoporderextflags2table(flags)
 	local t={}
 	local band=bit.band
 	local tobit=bit.tobit
-	if band(tobit(flags), 0x1) then t.userest=true else t.userest = false end
-	if band(tobit(flags),0x2) then t.cpf=true t.cpf=false	end
-	if band(tobit(flags), 0x4) then t.asolopf=true else t.asolopf =false end
-	if band(tobit(flags), 0x8) then t.percent=true else t.percent = false end
-	if band(tobit(flags),0x10) then t.defpercent=true else t.defpercent=false end
-	if band(tobit(flags),0x20) then t.this_day=true else t.this_day=false end
-	if band(tobit(flags),0x40) then t.interval=true else t.interval=false end
-	if band(tobit(flags),0x80) then t.markettp=true else t.markettp=false end
-	if band(tobit(flags),0x100) then t.marketstop=true else t.marketstop=false end
+	if band(tobit(flags), 0x1)~=0 then t.userest=true else t.userest = false end
+	if band(tobit(flags),0x2)~=0 then t.cpf=true t.cpf=false	end
+	if band(tobit(flags), 0x4)~=0 then t.asolopf=true else t.asolopf =false end
+	if band(tobit(flags), 0x8)~=0 then t.percent=true else t.percent = false end
+	if band(tobit(flags),0x10)~=0 then t.defpercent=true else t.defpercent=false end
+	if band(tobit(flags),0x20)~=0 then t.this_day=true else t.this_day=false end
+	if band(tobit(flags),0x40)~=0 then t.interval=true else t.interval=false end
+	if band(tobit(flags),0x80)~=0 then t.markettp=true else t.markettp=false end
+	if band(tobit(flags),0x100)~=0 then t.marketstop=true else t.marketstop=false end
 	return t
 end
 function bit_set( flags, index )
