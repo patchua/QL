@@ -48,7 +48,7 @@ function OnInitDo()
 		return
 	end
 	security=settings:find("security").value
-	class=getSecurityInfo('',security).class_code
+	class=settings:find('class').value
 	work_spread=tonumber(settings:find("work_spread").value)
 	wait_slippage=tonumber(settings:find("wait_slippage").value)
 	alert_slippage=tonumber(settings:find("alert_slippage").value)

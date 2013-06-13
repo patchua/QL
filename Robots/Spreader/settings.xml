@@ -11,5 +11,6 @@
   <bidEnable value="1" />
   <askEnable value="1" />
   <security value="SBER" />
+  <class vlaue="BQUOTEFUT" />
 <volume value="1"/>
 </table>
