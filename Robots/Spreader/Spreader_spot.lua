@@ -71,7 +71,7 @@ function OnInitDo()
 	if tonumber(settings:find("askEnable").value)==1 then askEnable=true else askEnable=false end
 	toLog(log,"Settings loaded sucessfully.")
 	toLog(log,settings)
-
+	
 	step=getParamEx(class,security,"SEC_PRICE_STEP").param_value
 	is_run=true
 	toLog(log,"Start main. step="..step)
