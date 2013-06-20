@@ -12,7 +12,15 @@ period=1
 riskFreeRate=0
 yearLength=365
 FUTCLASSES='SPBFUT,FUTUX'
-OPRCLASSES='SPBOPT,OPTUX'
+OPTCLASSES='SPBOPT,OPTUX'
+delta_col_name='Delta'
+gamma_col_name='Gamma(%)'
+vega_col_name='Vega'
+theta_col_name='Theta'
+rho_col_name='Rho'
+vm_col_name='Var Margin'
+acc_col_name='Account'
+basec_col_name='Base Contract'
 -- GUI
 tbl=QTable:new()
 
@@ -132,14 +140,14 @@ end
 function OnInitDo()
 	log=getScriptPath()..'\\'..log
 	tbl:SetCaption('Options Portfolios Calculator '..VERSION)
-	tbl:AddColumn('Account',QTABLE_STRING_TYPE,20)
-	tbl:AddColumn('Base Contract',QTABLE_STRING_TYPE,10)
-	tbl:AddColumn('Delta',QTABLE_DOUBLE_TYPE,10,format2f)
-	tbl:AddColumn('Gamma(%)',QTABLE_DOUBLE_TYPE,10,format5f)
-	tbl:AddColumn('Vega',QTABLE_DOUBLE_TYPE,10,format2f)
-	tbl:AddColumn('Theta',QTABLE_DOUBLE_TYPE,10,format2f)
-	tbl:AddColumn('Rho',QTABLE_DOUBLE_TYPE,10,format2f)
-	tbl:AddColumn('Var Margin',QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn(acc_col_name,QTABLE_STRING_TYPE,20)
+	tbl:AddColumn(basec_col_name,QTABLE_STRING_TYPE,10)
+	tbl:AddColumn(delta_col_name,QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn(gamma_col_name,QTABLE_DOUBLE_TYPE,10,format5f)
+	tbl:AddColumn(vega_col_name,QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn(theta_col_name,QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn(rho_col_name,QTABLE_DOUBLE_TYPE,10,format2f)
+	tbl:AddColumn(vm_col_name,QTABLE_DOUBLE_TYPE,10,format2f)
 	tbl:Show()
 	--tbl:AddLine()
 	
@@ -275,12 +283,12 @@ function updateGUI()
 			else
 				toLog(log,'Update controls')
 				local l=gui[k][k1].line
-				tbl:SetValue(l,'Delta',v1.delta)
-				tbl:SetValue(l,'Gamma',v1.gamma)
-				tbl:SetValue(l,'Theta',v1.theta)
-				tbl:SetValue(l,'Vega',v1.vega)
-				tbl:SetValue(l,'Rho',v1.rho)
-				tbl:SetValue(l,'Var Margin',v1.vm)
+				tbl:SetValue(l,delta_col_name,v1.delta)
+				tbl:SetValue(l,gamma_col_name,v1.gamma)
+				tbl:SetValue(l,theta_col_name,v1.theta)
+				tbl:SetValue(l,vega_col_name,v1.vega)
+				tbl:SetValue(l,rho_col_name,v1.rho)
+				tbl:SetValue(l,vm_col_name,v1.vm)
 				--[[
 				gui[k][k1].delta_lbl.title='delta='..string.format('%.2f',v1.delta)
 				gui[k][k1].gamma_lbl.title='gamma='..string.format('%.6f',v1.gamma)
