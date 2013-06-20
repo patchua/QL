@@ -877,30 +877,35 @@ function QTable:Clear()
      -- очистить таблицу
      return Clear(self.t_id)
 end 
-function QTable:SetValue(row, col_name, data)
-     -- Установить значение в ячейке
-	 local col_ind = self.columns[col_name].id or nil
-     if col_ind == nil then
+function QTable:SetValue(row, col_name, data, formatted)
+	-- Установить значение в ячейке
+	local col_ind = self.columns[col_name].id or nil
+	if col_ind == nil then
 		return false
-     end
-     -- если для столбца задана функция форматирования, то она используется
-     local ff = self.columns[col_name].format_function
-     if type(ff) == "function" then
-         -- в качестве строкового представления используется
-         -- результат выполнения функции форматирования
-         if self.columns[col_name].c_type==QTABLE_STRING_TYPE or self.columns[col_name].c_type==QTABLE_CACHED_STRING_TYPE then
+	end
+	local col_type = self.columns[col_name].c_type
+	-- если для НЕстрокового значения уже дан отформатированный вариант, то сначала используется он
+	if formatted and col_type~=QTABLE_STRING_TYPE and col_type~=QTABLE_CACHED_STRING_TYPE then
+		return SetCell(self.t_id, row, col_ind, formatted, data)
+	end
+	-- если для столбца задана функция форматирования, то она используется
+	local ff = self.columns[col_name].format_function
+	if type(ff) == "function" then
+		-- в качестве строкового представления используется
+		-- результат выполнения функции форматирования
+		if col_type==QTABLE_STRING_TYPE or col_type==QTABLE_CACHED_STRING_TYPE then
 			return SetCell(self.t_id, row, col_ind, ff(data))
 		else
-			return SetCell(self.t_id, row, col_ind, ff(data),data)
+			return SetCell(self.t_id, row, col_ind, ff(data), data)
 		end
-     else
-		if self.columns[col_name].c_type==QTABLE_STRING_TYPE or self.columns[col_name].c_type==QTABLE_CACHED_STRING_TYPE then
+	else
+		if col_type==QTABLE_STRING_TYPE or col_type==QTABLE_CACHED_STRING_TYPE then
 			return SetCell(self.t_id, row, col_ind, tostring(data))
 		else
-			return SetCell(self.t_id, row, col_ind, tostring(data),data)
+			return SetCell(self.t_id, row, col_ind, tostring(data), data)
 		end
-     end
-end 
+	end
+end
 function QTable:AddLine(key)
     -- добавляет в конец таблицы пустую строчку и возвращает ее номер
 	local lkey=nil

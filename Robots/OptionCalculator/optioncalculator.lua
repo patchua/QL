@@ -8,7 +8,7 @@ data={}
 portfolios_list={}
 gui={}
 last_calc_time=0
-period=1
+period=5
 riskFreeRate=0
 yearLength=365
 FUTCLASSES='SPBFUT,FUTUX'
@@ -55,12 +55,13 @@ end
 -- different functions for greeks
 function delta(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
-	if otp_type=="Call" then
+	if opt_type=="Call" then
 		return math.exp(-1*risk_free*pdaystomate)*normalDistr(d1)
 	else
 		return -1*math.exp(-1*risk_free*pdaystomate)*normalDistr(-1*d1)
 	end
 end
+--[[
 function gamma(settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
 	return normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)/(settleprice*volatility*math.sqrt(pdaystomate))
@@ -68,6 +69,10 @@ end
 function gammap(settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
 	return normalDistrDensity(d1)*math.exp(-1*risk_free*pdaystomate)/(100*volatility*math.sqrt(pdaystomate))
+end]]
+function gammap(settleprice,strike,volatility,pdaystomate,risk_free)
+	local d1=math.log(settleprice/strike)
+	return 100*normalDistrDensity(d1)/(settleprice*volatility*math.sqrt(pdaystomate))
 end
 function theta(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
@@ -122,8 +127,8 @@ function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 end
 --quik callbacks
 function OnFuturesClientHolding(hold)
-	if is_run and hold~=nil then
-		--toLog(log,'New holding update')
+	if is_run and hold~=nil  then
+		toLog(log,'New holding update')
 		table.insert(futures_holding,hold)
 	end
 end
@@ -157,68 +162,79 @@ function OnInitDo()
 		row=getItem('futures_client_holding',i)
 		if row.trdaccid~='' and row.type==0 then
 			updatePortfoliosList(row)
-			--toLog(log,"Account "..row.trdaccid.." added to data")
+			toLog(log,"Account "..row.trdaccid.." added to data.")
+			toLog(log,row)
 		end
 	end
 	updateGUI()
 	return true
 end
 function updatePortfoliosList(position)
-	toLog(log,'Update portfolio list with position '..position.seccode)
 	local base=''
 	local pl=portfolios_list
-	local class=getSecurityInfo('',position.seccode).class_code
+	local trdaccount=position.trdaccid
+	local varm=position.varmargin
+	local tnet=position.totalnet
+	local sec=position.seccode
+	local class=getSecurityInfo('',sec).class_code
+	toLog(log,'Update portfolio list with position '..sec..' tnet='..tnet)
 	if string.find(FUTCLASSES,class)~=nil then
 		toLog(log,"Futures position")
-		base=position.seccode
+		base=sec
 	else
 		toLog(log,'Option position')
-		base,err=getParam(position.seccode,'optionbase')
+		base=getParam(sec,'optionbase')
 	end
-	if pl[position.trdaccid]==nil then
-		toLog(log,'First position for account '..position.trdaccid..'. Create new node. Base='..base)
-		pl[position.trdaccid]={}
-		pl[position.trdaccid][base]={}
-		pl[position.trdaccid][base][position.seccode]=position
-		pl[position.trdaccid][base].delta=0
-		pl[position.trdaccid][base].gamma=0
-		pl[position.trdaccid][base].vega=0
-		pl[position.trdaccid][base].theta=0
-		pl[position.trdaccid][base].rho=0
-		pl[position.trdaccid][base].phi=0
-		pl[position.trdaccid][base].zeta=0
-		pl[position.trdaccid][base].vm=position.varmargin
+	if pl[trdaccount]==nil then
+		toLog(log,'First position for account '..trdaccount..'. Create new node. Base='..base)
+		pl[trdaccount]={}
+		pl[trdaccount][base]={}
+		pl[trdaccount][base][sec]={}
+		pl[trdaccount][base][sec].totalnet=tnet
+		pl[trdaccount][base][sec].varmargin=varm
+		pl[trdaccount][base].delta=0
+		pl[trdaccount][base].gamma=0
+		pl[trdaccount][base].vega=0
+		pl[trdaccount][base].theta=0
+		pl[trdaccount][base].rho=0
+		pl[trdaccount][base].phi=0
+		pl[trdaccount][base].zeta=0
+		pl[trdaccount][base].vm=varm
 		return true
 	end
-	if pl[position.trdaccid][base]==nil then
-		toLog(log,'First position for base contract '..base..'. Create new node. Account '..position.trdaccid)
-		pl[position.trdaccid][base]={}
-		pl[position.trdaccid][base][position.seccode]=position
-		pl[position.trdaccid][base].delta=0
-		pl[position.trdaccid][base].gamma=0
-		pl[position.trdaccid][base].vega=0
-		pl[position.trdaccid][base].theta=0
-		pl[position.trdaccid][base].rho=0
-		pl[position.trdaccid][base].phi=0
-		pl[position.trdaccid][base].zeta=0
-		pl[position.trdaccid][base].vm=position.varmargin
+	if pl[trdaccount][base]==nil then
+		toLog(log,'First position for base contract '..base..'. Create new node. Account '..trdaccount)
+		pl[trdaccount][base]={}
+		pl[trdaccount][base][sec]={}
+		pl[trdaccount][base][sec].totalnet=tnet
+		pl[trdaccount][base][sec].varmargin=varm
+		pl[trdaccount][base].delta=0
+		pl[trdaccount][base].gamma=0
+		pl[trdaccount][base].vega=0
+		pl[trdaccount][base].theta=0
+		pl[trdaccount][base].rho=0
+		pl[trdaccount][base].phi=0
+		pl[trdaccount][base].zeta=0
+		pl[trdaccount][base].vm=varm
 		return true
 	end
-	if pl[position.trdaccid][base][position.seccode]==nil then
-		toLog(log,'New position for account '..position.trdaccid..' Base '..base..'. Add new node. Sec= '..position.seccode)
-		pl[position.trdaccid][base][position.seccode]=position
-		pl[position.trdaccid][base].vm=pl[position.trdaccid][base].vm+position.varmargin
+	if pl[trdaccount][base][sec]==nil then
+		toLog(log,'New position for account '..trdaccount..' Base '..base..'. Add new node. Sec= '..sec)
+		pl[trdaccount][base][sec]={}
+		pl[trdaccount][base][sec].totalnet=tnet
+		pl[trdaccount][base][sec].varmargin=varm
+		pl[trdaccount][base].vm=pl[trdaccount][base].vm+varm
 		return true
 	end
-	if pl[position.trdaccid][base][position.seccode].totalnet~=position.totalnet then
-		toLog(log,'Update quantity to '..position.totalnet..' for Acc='..position.trdaccid..' Base='..base..' Sec='..position.seccode)
-		pl[position.trdaccid][base][position.seccode]=position
+	if pl[trdaccount][base][sec].totalnet~=tnet then
+		toLog(log,'Update quantity to '..tnet..' for Acc='..trdaccount..' Base='..base..' Sec='..sec)
+		pl[trdaccount][base][sec].totalnet=tnet
 		return true
 	end
-	if pl[position.trdaccid][base][position.seccode].varmargin~=position.varmargin then
-		toLog(log,'Update varmargin to '..position.varmargin..' for Acc='..position.trdaccid..' Base='..base..' Sec='..position.seccode)
-		pl[position.trdaccid][base].vm=pl[position.trdaccid][base].vm-pl[position.trdaccid][base][position.seccode].varmargin+position.varmargin
-		pl[position.trdaccid][base][position.seccode]=position
+	if pl[trdaccount][base][sec].varmargin~=varm then
+		toLog(log,'Update varmargin to '..varm..' for Acc='..trdaccount..' Base='..base..' Sec='..sec)
+		pl[trdaccount][base].vm=pl[trdaccount][base].vm-pl[trdaccount][base][sec].varmargin+varm
+		pl[trdaccount][base][sec].varmargin=varm
 		return true
 	end
 	--toLog(log,'Update portfolio list ended')
@@ -230,7 +246,7 @@ function calculateGreeks(acc,base)
 	local class=''
 	local opttype,volat,stryke,sprice,pdtm
 	pl.delta=0
-	pl.gamm=0
+	pl.gamma=0
 	pl.vega=0
 	pl.theta=0
 	pl.rho=0
@@ -254,11 +270,13 @@ function calculateGreeks(acc,base)
 				pl.vega=pl.vega+v.totalnet*vega(sprice,strike,volat,pdtm,riskFreeRate)
 				pl.theta=pl.theta+v.totalnet*theta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				pl.rho=pl.rho+v.totalnet*rho(opttype,sprice,strike,volat,pdtm,riskFreeRate)
-				pl.phi=pl.phi+v.totalnet*phi(opttype,sprice,strike,volat,pdtm,riskFreeRate)
-				pl.zeta=pl.zeta+v.totalnet*zeta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
+				--pl.phi=pl.phi+v.totalnet*phi(opttype,sprice,strike,volat,pdtm,riskFreeRate)
+				--pl.zeta=pl.zeta+v.totalnet*zeta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
+				toLog(log,'sec='..k..' delta='..pl.delta)
 			end
 		end
 	end
+	toLog(log,pl)
 	toLog(log,'calculations ended')
 end
 function createGUIelement(acc,base)
