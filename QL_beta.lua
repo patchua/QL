@@ -709,11 +709,7 @@ function killAllOrders(table_mask)
 					--toLog(log,"check key="..key.." val="..val)
 					--toLog(log,"strlowe="..string.lower(key).." row="..row[string.lower(key)].." tbl="..val)
 					if low(key)=='comment' then
-						if fnd(FUT_OPT_CLASSES,row.class_code)~=nil then
-							if fnd(low(row.comment),low(val))==nil then	tokill=false break end
-						else
-							if fnd(low(row.client_code),low(val))==nil then	tokill=false break end
-						end
+						if fnd(low(row.brokerref),low(val))==nil then	tokill=false break end
 					else
 						if row[low(key)]~=val then tokill=false	break end
 					end
@@ -756,7 +752,7 @@ function killAllStopOrders(table_mask)
 					--toLog(log,"check key="..key.." val="..val)
 					--toLog(log,"strlowe="..string.lower(key).." row="..row[string.lower(key)].." tbl="..val)
 					if low(key)=='comment' then
-						if fnd(low(row.comment),low(val))==nil then	tokill=false break end
+						if fnd(low(row.brokerref),low(val))==nil then	tokill=false break end
 					else
 						if row[low(key)]~=val then tokill=false	break end
 					end
