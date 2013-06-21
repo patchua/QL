@@ -1,4 +1,4 @@
-LIBVERSION='0.5.2.0'
+LIBVERSION='0.5.2.3'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -14,14 +14,25 @@ local string_lower=string.lower
 local string_len=string.len
 local string_sub=string.sub
 local string_upper=string.upper
+local NOTRANDOMIZED=true
 
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
 DATETIME_MAX_VALUE={['day']=31,['week_day']=7,['hour']=23,['ms']=999,['min']=59,['month']=12,['sec']=59,['year']=9999}
-NOTRANDOMIZED=true
-VERSIONLESS6713=true
+-- Standart Colors
+WHITE='255 255 255'
+BLACK='0 0 0'
+GREEN='0 128 0'
+RED='255 0 0'
+BLUE='0 0 255'
+LIGHT_GREEN='128 255 128'
+LIGHT_RED='255 128 128'
+-- for custom colors you may use this tool http://www.colorspire.com/rgb-color-wheel/
 
+-- terminal versions globals
+VERSIONLESS6713=true
 TERMINAL_VERSION=getInfoParam('VERSION')
+
 function versionLess(ver1,ver2)
 	local _,dot1=string_gsub(ver1,'%.','')
 	local _,dot2=string_gsub(ver2,'%.','')
@@ -1345,7 +1356,7 @@ function getRowFromTable(table_name,key,value)
 	-- возвращаем строку (таблицу Луа) из таблицы table_name с столбцом key равным value.
 	-- table_name[key].value
 	local i
-	for i=getNumberOf(table_name),0,-1 do
+	for i=getNumberOf(table_name)-1,0,-1 do
 		if getItem(table_name,i)[key]==value then
 			return getItem(table_name,i)
 		end
