@@ -20,13 +20,12 @@ FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
 DATETIME_MAX_VALUE={['day']=31,['week_day']=7,['hour']=23,['ms']=999,['min']=59,['month']=12,['sec']=59,['year']=9999}
 -- Standart Colors
-WHITE='255 255 255'
-BLACK='0 0 0'
-GREEN='0 128 0'
-RED='255 0 0'
-BLUE='0 0 255'
-LIGHT_GREEN='128 255 128'
-LIGHT_RED='255 128 128'
+WHITE=16777215
+BLACK=0
+GREEN=32768
+RED=255
+LIGHT_GREEN=8454016
+LIGHT_RED=8421631
 -- for custom colors you may use this tool http://www.colorspire.com/rgb-color-wheel/
 
 -- terminal versions globals
@@ -1154,20 +1153,20 @@ function getClass(security)
 	-- возвращает класс для бумаги security
 	return getSecurityInfo('',security).class_code
 end
-function getSecurityClass(market,sec_code)
-   -- Функция возвращает код класса для бумаги на определенном рынке или режиме торгов
-   local class_code={}
-   if market=="MICEX-Spot" then class_code={"EQBR","EQBS","EQNL","EQLV","EQNE"}
-   elseif market=="SMAL" then class_code={"SMAL"}
-   elseif market=='UX-Spot' then class_code={"GTS"}
-   elseif market=='UX-Fut' then class_code={"FUTUX"}
-   elseif market=='UX-Opt' then class_code={"OPTUX"}
-   elseif market=="RTS-Fut" then class_code={"SPBFUT"}
-   elseif market=='RTS-Opt' then class_code={"SPBOPT"}
-   elseif market=="AnotherMarket" then class_code={"1234","4321"}
+function getSecurityClass(classes_list,sec_code)
+   -- Функция возвращает код класса для бумаги на определенном рынке или режиме торгов или просто по списку классов или по getClassesList(), если первый параметр пустой
+   if classes_list=="" then classes_list=getClassesList()
+   elseif classes_list=="MICEX-Spot" then classes_list="EQBR,EQBS,EQNL,EQLV,EQNE"
+   elseif classes_list=="SMAL" then classes_list="SMAL"
+   elseif classes_list=="UX-Spot" then classes_list="GTS"
+   elseif classes_list=="UX-Fut" then classes_list="FUTUX"
+   elseif classes_list=="UX-Opt" then classes_list="OPTUX"
+   elseif classes_list=="RTS-Fut" then classes_list="SPBFUT"
+   elseif classes_list=="RTS-Opt" then classes_list="SPBOPT"
+   elseif classes_list=="Demo-Quik" then classes_list="QJSIM"
    end
-   for i=1,#class_code do
-      if getSecurityInfo(class_code[i],sec_code) then return class_code[i] end
+   for class_code in string.gmatch(classes_list,"%a+") do
+      if getSecurityInfo(class_code,sec_code) then return class_code end
    end
    return nil
 end
