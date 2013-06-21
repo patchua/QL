@@ -4,16 +4,24 @@ package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
 require"socket"
 local math_floor=math.floor
+local math_random=math.random
+local math_randomseed=math.randomseed
 local string_format=string.format
 local string_gsub=string.gsub
+local string_gmatch=string.gmatch
+local string_find=string.find
+local string_lower=string.lower
+local string_len=string.len
+local string_sub=string.sub
+local string_upper=string.upper
+
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
 DATETIME_MAX_VALUE={['day']=31,['week_day']=7,['hour']=23,['ms']=999,['min']=59,['month']=12,['sec']=59,['year']=9999}
 NOTRANDOMIZED=true
+VERSIONLESS6713=true
 
 TERMINAL_VERSION=getInfoParam('VERSION')
---TERMINAL_VERSION='6.7.1.3'
-
 function versionLess(ver1,ver2)
 	local _,dot1=string_gsub(ver1,'%.','')
 	local _,dot2=string_gsub(ver2,'%.','')
@@ -23,12 +31,12 @@ function versionLess(ver1,ver2)
 	local v2={}
 	local i=1
 	local j
-	for a in string.gmatch(ver1,'%d+') do
+	for a in string_gmatch(ver1,'%d+') do
 		v1[i]=0+a
 		i=i+1
 	end
 	i=1
-	for a in string.gmatch(ver2,'%d+') do
+	for a in string_gmatch(ver2,'%d+') do
 		v2[i]=0+a
 		i=i+1
 	end
@@ -47,7 +55,7 @@ if DEFAULT_COLOR==nil then DEFAULT_COLOR=-1 end
 Trading Module
 ]]--
 function sendLimit(class,security,direction,price,volume,account,client_code,comment,execution_condition,expire_date,market_maker)
-	if string.find(FUT_OPT_CLASSES,class)~=nil then
+	if string_find(FUT_OPT_CLASSES,class)~=nil then
 		return sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
 	else
 		return sendLimitSpot(class,security,direction,price,volume,account,client_code,comment,market_maker)
@@ -68,10 +76,10 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		return nil,"QL.sendLimitFO(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="Ввод заявки",
@@ -86,7 +94,7 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 	}
 	if direction=='B' then transaction['К/П']='Покупка' else transaction['К/П']='Продажа' end
 	if comment~=nil then
-		transaction['Комментарий']=string.sub(tostring(comment),0,20)
+		transaction['Комментарий']=string_sub(tostring(comment),0,20)
 	else
 		transaction['Комментарий']='QL'
 	end
@@ -95,9 +103,9 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		transaction['Дата экспирации']=tostring(expire_date)
 	end
 	if execution_condition~=nil then 
-		if string.upper(execution_condition)=='FILL_OR_KILL' then
+		if string_upper(execution_condition)=='FILL_OR_KILL' then
 			transaction["Условие исполнения"]='Немедленно или отклонить'
-		elseif string.upper(execution_condition)=='KILL_BALANCE' then
+		elseif string_upper(execution_condition)=='KILL_BALANCE' then
 			transaction["Условие исполнения"]='Снять остаток'
 		end
 	end
@@ -124,10 +132,10 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		return nil,"QL.sendLimitSpot(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_ORDER",
@@ -144,9 +152,9 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		transaction.client_code=tostring(client_code)
 	end
 	if comment~=nil then
-		transaction.client_code=string.sub(transaction.client_code..'//'..tostring(comment),0,20)
+		transaction.client_code=string_sub(transaction.client_code..'//'..tostring(comment),0,20)
 	else
-		transaction.client_code=string.sub(transaction.client_code..'//QL',0,20)
+		transaction.client_code=string_sub(transaction.client_code..'//QL',0,20)
 	end
 	if market_maker~=nil and market_maker then
 		transaction['MARKET_MAKER_ORDER']='YES'
@@ -169,10 +177,10 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		return nil,"QL.sendMarket(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_ORDER",
@@ -188,7 +196,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	else
 		transaction.client_code=client_code
 	end
-	if string.find(FUT_OPT_CLASSES,class)~=nil then
+	if string_find(FUT_OPT_CLASSES,class)~=nil then
 		if direction=="B" then
 			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMAX").param_value)
 		else
@@ -198,9 +206,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		transaction.price="0"
 	end
 	if comment~=nil then
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=string.sub(comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'/QL'..comment,0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=string_sub(comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'/QL'..comment,0,20) end
 	else
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=tostring('QL') else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=tostring('QL') else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -221,10 +229,10 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -247,7 +255,7 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		transaction['EXPIRY_DATE']=exp_date
 	end
 	if comment~=nil then
-		transaction.comment=string.sub(tostring(comment),0,20)
+		transaction.comment=string_sub(tostring(comment),0,20)
 	else
 		transaction.comment='QL'
 	end
@@ -270,10 +278,10 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -297,10 +305,10 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL'..comment,0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL'..comment,0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('//QL'..comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL'..comment,0,20) end
 	else
 		transaction.comment=tostring(comment)
-		if string.find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string.sub('//QL',0,20) else transaction.client_code=string.sub(transaction.client_code..'//QL',0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('//QL',0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -321,10 +329,10 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		return nil,"QL.sendTake(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -351,7 +359,7 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		transaction['EXPIRY_DATE']=exp_date
 	end
 	if comment~=nil then
-		transaction.comment=string.sub(tostring(comment),0,20)
+		transaction.comment=string_sub(tostring(comment),0,20)
 	else
 		transaction.comment='QL'
 	end
@@ -373,7 +381,7 @@ function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if forder==nil then
 		return nil,"QL.moveOrder(): Can`t find order_number="..fo_number.." in orders table!"
 	end
-	if string.find(FUT_OPT_CLASSES,forder.class_code)~=nil then
+	if string_find(FUT_OPT_CLASSES,forder.class_code)~=nil then
 		return moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	else
 		return moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
@@ -532,10 +540,10 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		return nil,"QL.moveOrder(): Mode out of range! mode can be from {0,1,2}"
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local order=getRowFromTable("orders","order_num",fo_number)
 	if order==nil then
 		return nil,"QL.moveOrderFO(): Can`t find order_number="..fo_number.." in orders table!"
@@ -559,10 +567,10 @@ function sendRPS(class,security,direction,price,volume,account,client_code,partn
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_NEG_DEAL",
@@ -594,10 +602,10 @@ function sendReportOnRPS(class,operation,key)
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_REPORT",
@@ -621,10 +629,10 @@ function killOrder(orderkey,security,class)
 		return nil,"QL.killOrder(): Can`t kill order. OrderKey nil or zero"
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="KILL_ORDER",
@@ -659,10 +667,10 @@ function killStopOrder(orderkey,security,class)
 		return nil,"QL.killStopOrder(): Can`t kill order. OrderKey nil or zero"
 	end
 	if NOTRANDOMIZED then
-		math.randomseed(socket.gettime())
+		math_randomseed(socket.gettime())
 		NOTRANDOMIZED=false
 	end
-	local trans_id=math.random(2000000000)
+	local trans_id=math_random(2000000000)
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="KILL_STOP_ORDER",
@@ -681,7 +689,7 @@ function killStopOrder(orderkey,security,class)
 		transaction.classcode=class 
 	end
 	--toLog("ko.txt",transaction)
-	if string.find(FUT_OPT_CLASSES,transaction.classcode)~=nil then transaction['BASE_CONTRACT']=getParamEx(transaction.classcode,transaction.seccode,'optionbase').param_image end
+	if string_find(FUT_OPT_CLASSES,transaction.classcode)~=nil then transaction['BASE_CONTRACT']=getParamEx(transaction.classcode,transaction.seccode,'optionbase').param_image end
 	local res=sendTransaction(transaction)
 	if res~="" then
 		return nil,"QL.killStopOrder(): "..res
@@ -697,8 +705,7 @@ function killAllOrders(table_mask)
 	local tokill=true
 	local row={}
 	local result_str=""
-	local low=string.lower
-	local fnd=string.find
+
 	for i=0,getNumberOf("orders"),1 do
 		row=getItem("orders",i)
 		tokill=false
@@ -710,10 +717,10 @@ function killAllOrders(table_mask)
 				for key,val in pairs(table_mask) do
 					--toLog(log,"check key="..key.." val="..val)
 					--toLog(log,"strlowe="..string.lower(key).." row="..row[string.lower(key)].." tbl="..val)
-					if low(key)=='comment' then
-						if fnd(low(row.brokerref),low(val))==nil then	tokill=false break end
+					if string_lower(key)=='comment' then
+						if string_find(string_lower(row.brokerref),string_lower(val))==nil then	tokill=false break end
 					else
-						if row[low(key)]~=val then tokill=false	break end
+						if row[string_lower(key)]~=val then tokill=false	break end
 					end
 				end
 			end
@@ -740,8 +747,6 @@ function killAllStopOrders(table_mask)
 	local tokill=true
 	local row={}
 	local result_str=""
-	local low=string.lower
-	local fnd=string.find
 	for i=0,getNumberOf("stop_orders"),1 do
 		row=getItem("stop_orders",i)
 		tokill=false
@@ -753,10 +758,10 @@ function killAllStopOrders(table_mask)
 				for key,val in pairs(table_mask) do
 					--toLog(log,"check key="..key.." val="..val)
 					--toLog(log,"strlowe="..string.lower(key).." row="..row[string.lower(key)].." tbl="..val)
-					if low(key)=='comment' then
-						if fnd(low(row.brokerref),low(val))==nil then	tokill=false break end
+					if string_lower(key)=='comment' then
+						if string_find(string_lower(row.brokerref),string_lower(val))==nil then	tokill=false break end
 					else
-						if row[low(key)]~=val then tokill=false	break end
+						if row[string_lower(key)]~=val then tokill=false	break end
 					end
 				end
 			end
@@ -779,7 +784,7 @@ function getPosition(security,account)
     --возвращает чистую позицию по инструменту
 	-- для срочного рынка передаем номер счета, для спот-рынка код-клиента
 	local class_code=getSecurityInfo("",security).class_code
-    if string.find(FUT_OPT_CLASSES,class_code)~=nil then
+    if string_find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
 		for i=0,getNumberOf("futures_client_holding") do
 			local row=getItem("futures_client_holding",i)
@@ -1415,12 +1420,12 @@ function getLTime()
 	-- возвращает текущее время компьютера в виде числа формата HHMMSS
 	local t=os.date('*t')
 	local a=""
-	if string.len(tostring(t.hour))<2 then a='0'..t.hour else a=t.hour end
-	if string.len(tostring(t.min))<2 then a=a..'0'..t.min else a=a..t.min end
-	if string.len(tostring(t.sec))<2 then a=a..'0'..t.sec else a=a..t.sec end
+	if string_len(tostring(t.hour))<2 then a='0'..t.hour else a=t.hour end
+	if string_len(tostring(t.min))<2 then a=a..'0'..t.min else a=a..t.min end
+	if string_len(tostring(t.sec))<2 then a=a..'0'..t.sec else a=a..t.sec end
 	return tonumber(a)
 end
-function getTradeDate()
+function getDate()
 	-- возвращает текущую торговую дату в виде числа формата YYYYMMDD
 	local t = ""
 	local a = tostring(getInfoParam("TRADEDATE"))
@@ -1444,12 +1449,12 @@ end
 function datetime2string(dt)
 	-- преобразует обьект datetime в строку формата YYYYMMDDHHMMSS
 	local s='' 
-	if string.len(tostring(dt.year))<4 then s=s..'20'..dt.year else s=s..dt.year end
-	if string.len(tostring(dt.month))<2 then s=s..'0'..dt.month else s=s..dt.month end
-	if string.len(tostring(dt.day))<2 then s=s..'0'..dt.day else s=s..dt.day end
-	if string.len(tostring(dt.hour))<2 then s=s..'0'..dt.hour else s=s..dt.hour end
-	if string.len(tostring(dt.min))<2 then s=s..'0'..dt.min else s=s..dt.min end
-	if string.len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
+	if string_len(tostring(dt.year))<4 then s=s..'20'..dt.year else s=s..dt.year end
+	if string_len(tostring(dt.month))<2 then s=s..'0'..dt.month else s=s..dt.month end
+	if string_len(tostring(dt.day))<2 then s=s..'0'..dt.day else s=s..dt.day end
+	if string_len(tostring(dt.hour))<2 then s=s..'0'..dt.hour else s=s..dt.hour end
+	if string_len(tostring(dt.min))<2 then s=s..'0'..dt.min else s=s..dt.min end
+	if string_len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
 	return s
 end
 function isEqual(tbl1,tbl2)
