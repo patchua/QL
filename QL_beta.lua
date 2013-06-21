@@ -3,7 +3,9 @@ LIBVERSION='0.5.2.0'
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
 require"socket"
-require 'bit'
+local math_floor=math.floor
+local string_format=string.format
+local string_gsub=string.gsub
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
 DATETIME_MAX_VALUE={['day']=31,['week_day']=7,['hour']=23,['ms']=999,['min']=59,['month']=12,['sec']=59,['year']=9999}
@@ -13,8 +15,8 @@ TERMINAL_VERSION=getInfoParam('VERSION')
 --TERMINAL_VERSION='6.7.1.3'
 
 function versionLess(ver1,ver2)
-	local _,dot1=string.gsub(ver1,'%.','')
-	local _,dot2=string.gsub(ver2,'%.','')
+	local _,dot1=string_gsub(ver1,'%.','')
+	local _,dot2=string_gsub(ver2,'%.','')
 	if dot1<dot2 then return false end
 	if dot1>dot2 then return true end
 	local v1={}
@@ -78,7 +80,7 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		["Условие исполнения"]="Поставить в очередь",
 		["Класс"]=class,
 		["Инструмент"]=security,
-		["Количество"]=string.format("%d",tostring(volume)),
+		["Количество"]=string_format("%d",tostring(volume)),
 		["Цена"]=toPrice(security,price),
 		["Торговый счет"]=tostring(account)
 	}
@@ -132,7 +134,7 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["PRICE"]=toPrice(security,price),
 		["ACCOUNT"]=tostring(account)
 	}
@@ -178,7 +180,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["TYPE"]="M",
-		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["ACCOUNT"]=account
 	}
 	if client_code==nil then
@@ -229,7 +231,7 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["STOPPRICE"]=toPrice(security,stopprice),
 		["PRICE"]=toPrice(security,dealprice),
 		["ACCOUNT"]=tostring(account)
@@ -278,7 +280,7 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["STOPPRICE"]=toPrice(security,stopprice),
 		["PRICE"]=toPrice(security,dealprice),
 		["ACCOUNT"]=tostring(account)
@@ -330,7 +332,7 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		["SECCODE"]=security,
 		["STOP_ORDER_KIND"]='TAKE_PROFIT_STOP_ORDER',
 		["OPERATION"]=direction,
-		["QUANTITY"]=string.format("%d",tostring(volume)),
+		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["STOPPRICE"]=toPrice(security,price),
 		["OFFSET_UNITS"]=offsetunits,
 		["SPREAD_UNITS"]=deffspreadunits,
@@ -884,6 +886,10 @@ function QTable:SetValue(row, col_name, data, formatted)
 		return false
 	end
 	local col_type = self.columns[col_name].c_type
+	
+	if type(data) ~= "number" and (col_type==QTABLE_INT_TYPE or col_type==QTABLE_DOUBLE_TYPE or col_type==QTABLE_INT64_TYPE) then
+      data = tonumber(data) or 0
+    end
 	-- если для НЕстрокового значения уже дан отформатированный вариант, то сначала используется он
 	if formatted and col_type~=QTABLE_STRING_TYPE and col_type~=QTABLE_CACHED_STRING_TYPE then
 		return SetCell(self.t_id, row, col_ind, formatted, data)
@@ -970,9 +976,9 @@ function QTable:SetColor(row,col_name,b_color,f_color,sel_b_color,sel_f_color)
 	toLog(log,'SetColors row:col='..tostring(row_ind)..':'..tostring(col_ind)..' - '..tostring(b_color)..tostring(f_color)..tostring(sel_b_color)..tostring(sel_f_color))
 	local bcnum,fcnum,selbcnum,selfcnum=0,0,0,0
 	if b_color==nil or b_color=='DEFAULT_COLOR' then bcnum=16777215 else bcnum=RGB2number(b_color) end
-	if f_color==nil or f_color=='DEFAULT_COLOR' then fcnum=0 else fcnum=RGB2number(b_color) end
-	if sel_b_color==nil or sel_b_color=='DEFAULT_COLOR' then selbcnum=16777215 else selbcnum=RGB2number(b_color) end
-	if sel_f_color==nil or sel_f_color=='DEFAULT_COLOR' then selfcnum=0 else selfcnum=RGB2number(b_color) end
+	if f_color==nil or f_color=='DEFAULT_COLOR' then fcnum=0 else fcnum=RGB2number(f_color) end
+	if sel_b_color==nil or sel_b_color=='DEFAULT_COLOR' then selbcnum=16777215 else selbcnum=RGB2number(sel_b_color) end
+	if sel_f_color==nil or sel_f_color=='DEFAULT_COLOR' then selfcnum=0 else selfcnum=RGB2number(sel_f_color) end
 	return SetColor(self.t_id,row_ind,col_ind,bcnum,fcnum,selbcnum,selfcnum)
 end
 function QTable:Highlight(row,col_name,b_color,f_color,timeout)
@@ -1200,19 +1206,19 @@ end
 function getHRTime()
 	-- возвращает время с милисекундами в виде строки
 	local now=socket.gettime()
-	return string.format("%s,%3d",os.date("%X",now),select(2,math.modf(now))*1000)
+	return string_format("%s,%3d",os.date("%X",now),select(2,math.modf(now))*1000)
 end
 function getHRDateTime()
 	-- Возвращает строку с текущей датой и время с милисекундами
 	local now=socket.gettime()
-	return string.format("%s,%3d",os.date("%c",now),select(2,math.modf(now))*1000)
+	return string_format("%s,%3d",os.date("%c",now),select(2,math.modf(now))*1000)
 end
 function toPrice(security,value)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
 	if (security==nil or value==nil) then return nil end
 	local scale=getParamEx(getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
-	return string.format("%."..string.format("%d",scale).."f",tonumber(value))
+	return string_format("%."..string_format("%d",scale).."f",tonumber(value))
 end
 function getPosFromTable(table,value)
 	-- Возвращает ключ значения value из таблицы table, иначе -1
@@ -1466,14 +1472,34 @@ function datetimediff(t1,t2)
 	return (((((t2.year-t1.year)*12+t2.month-t1.month)*30+t2.day-t1.day)*24+t2.hour-t1.hour)*60+t2.min-t1.min)*60+t2.sec-t1.sec
 	--return math.abs(d)
 end
+-- number formatting 
 function formatNumber(amount)
   -- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
-  local formatted = amount
+  local formatted = amount or 0
   while true do
-    formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
-    if (k==0) then
-      break
-    end
+    formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
+    if (k==0) then break end
   end
   return formatted
+end
+function formatNumber0(amount)
+  -- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
+  -- перед этим округляет число до целого
+  local formatted = math_floor((amount or 0)+0.5)
+  while true do
+    formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
+    if (k==0) then break end
+  end
+  return formatted
+end
+function formatNumber2(amount, scale)
+   -- разделяет строку с входящим числом разделенным на разряды (1000000 --> 1 000 000)
+   -- так же заполняется определенное кол-во знаков после запятой
+   -- если кол-во знаков после запятой не указывается, то берется 2 знака
+   local formatted = string_format("%."..(scale or 2).."f",amount or 0)
+   while true do
+      formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
+      if (k==0) then break end
+   end
+   return formatted
 end
