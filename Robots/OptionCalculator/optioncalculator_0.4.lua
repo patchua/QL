@@ -1,4 +1,4 @@
-VERSION=0.3
+VERSION=0.4
 require("QL")
 require("iuplua")
 require("iuplua_pplot")
@@ -119,21 +119,40 @@ function zeta(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	end
 end
 function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
-	local d1=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
-	local d2=d1-volatility*math.sqrt(pdaystomate)
-	local t={}
-	if otp_type=="Call" then
-		t.delta=math.exp(-1*risk_free*pdaystomate)*normalDistr(d1)
+	local sqrt_pdays=math.sqrt(pdaystomate)
+	local exp_risk_days=math.exp(-1*risk_free*pdaystomate)
+	local log_settle_strike=math.log(settleprice/strike)
+	local d1=(log_settle_strike+volatility*volatility*0.5*pdaystomate)/(volatility*sqrt_pdays)
+	local d2=d1-volatility*sqrt_pdays
+	local normdistr_d1=normalDistr(d1)
+	local normdistr_minus_d1=normalDistr(-1*d1)
+	local normdistrdens_d1=normalDistrDensity(d1)
+	local normdistr_d2=normalDistr(d2)
+	local normdistr_minus_d2=normalDistr(-1*d2)
+	local normdistrdens_d2=normalDistrDensity(d2)
+	local temp=settleprice*exp_risk_days
 
+	local delta,gamma,vega,thetha,rho=0,0,0,0,0
+	if otp_type=="Call" then
+		delta=exp_risk_days*normdistr_d1
+		gamma=100*normalDistrDensity(log_settle_strike)/(settleprice*volatility*sqrt_pdays)
+		thetha=(-1*(temp*normdistrdens_d1*volatility)/(2*sqrt_pdays)+risk_free*temp*normdistr_d1-risk_free*strike*temp*normdistr_d2)/yearLength
+		vega=settleprice*normdistrdens_d1*exp_risk_days*sqrt_pdays/100
+		rho=pdaystomate*strikeexp_risk_days*normdistr_d2/100
 	else
-		t.delta=-1*math.exp(-1*risk_free*pdaystomate)*normalDistr(-1*d1)
+		delta=-1*exp_risk_days*normdistr_minus_d1
+		gamma=100*normalDistrDensity(log_settle_strike)/(settleprice*volatility*sqrt_pdays)
+		thetha=(-1*(temp*normdistrdens_d1*volatility)/(2*sqrt_pdays)-risk_free*temp*normdistr_minus_d1+risk_free*strike*temp*normdistr_minus_d2)/yearLength
+		vega=settleprice*normdistrdens_d1*exp_risk_days*sqrt_pdays/100
+		rho=-1*pdaystomate*strike*exp_risk_days*normdistr_minus_d2/100
 	end
+	return delta,gamma,vega,thetha,rho
 end
 --quik callbacks
 function OnFuturesClientHolding(hold)
-	if is_run and hold~=nil and string.find(hold.trdaccid,'SPBFUT')~=nil then
+	if is_run and hold~=nil --[[and string.find(hold.trdaccid,'SPBFUT')~=nil]] then
 		toLog(log,'New holding update')
-		--table.insert(futures_holding,hold)
+		table.insert(futures_holding,hold)
 	end
 end
 function OnStop()
@@ -211,7 +230,7 @@ function OnInitDo()
 	--toLog(log,getNumberOf('futures_client_holding'))
 	for i=0,getNumberOf('futures_client_holding') do
 		row=getItem('futures_client_holding',i)
-		if row.trdaccid~='' and row.type==0 and string.find(row.trdaccid,'SPBFUT')~=nil then
+		if row.trdaccid~='' and row.type==0 --[[and string.find(row.trdaccid,'SPBFUT')~=nil]] then
 			updatePortfoliosList(row)
 			toLog(log,"Account "..row.trdaccid.." added to data.")
 			toLog(log,row)
@@ -359,12 +378,21 @@ function calculateGreeks(acc,base)
 				toLog(log,'Futures position ')
 				pl.delta=pl.delta+v.totalnet
 			else
+				--[[
 				opttype=v.opt_type
 				volat=getParam(k,'volatility')/100
 				strike=v.strike
 				sprice=getParam(base,'last')
 				pdtm=v.days_to_mate
+				]]
 				--toLog(log,k.." Position Base="..base.." type="..opttype..' BasePrice='..sprice..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
+				local d,g,veg,t,r=allGreeks(v.opt_type,getParam(base,'last'),v.strike,getParam(k,'volatility')/100,v.days_to_mate,risk_free)
+				pl.delta=pl.delta+d
+				pl.gamma=pl.gamma+g
+				pl.vega=pl.vega+veg
+				pl.theta=pl.theta+t
+				pl.rho=pl.rho+r
+				--[[
 				pl.delta=pl.delta+v.totalnet*delta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				pl.gamma=pl.gamma+v.totalnet*gammap(sprice,strike,volat,pdtm,riskFreeRate)
 				pl.vega=pl.vega+v.totalnet*vega(sprice,strike,volat,pdtm,riskFreeRate)
@@ -373,6 +401,7 @@ function calculateGreeks(acc,base)
 				--pl.phi=pl.phi+v.totalnet*phi(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				--pl.zeta=pl.zeta+v.totalnet*zeta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				toLog(log,'sec='..k..' delta='..pl.delta)
+				]]
 			end
 		end
 	end
