@@ -216,7 +216,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		transaction.price="0"
 	end
 	if comment~=nil then
-		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=string_sub(comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'/QL'..comment,0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=string_sub(comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL'..comment,0,20) end
 	else
 		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=tostring('QL') else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
 	end
