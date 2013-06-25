@@ -24,6 +24,7 @@ rho_col_name='Rho'
 vm_col_name='Var Margin'
 acc_col_name='Account'
 basec_col_name='Base Contract'
+filter_acc='FOUX_102'
 -- GUI
 tbl=QTable:new()
 --plot=iup.pplot{title='Yeild to mate',MARGINBOTTOM="65", MARGINLEFT="65", AXS_XLABEL="Strike", AXS_YLABEL="Yield", LEGENDSHOW="YES", LEGENDPOS="TOPLEFT"}
@@ -119,6 +120,7 @@ function zeta(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	end
 end
 function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
+	toLog(log,opt_type..','..settleprice..','..strike..','..volatility..','..pdaystomate..','..risk_free)
 	local sqrt_pdays=math.sqrt(pdaystomate)
 	local exp_risk_days=math.exp(-1*risk_free*pdaystomate)
 	local log_settle_strike=math.log(settleprice/strike)
@@ -133,12 +135,13 @@ function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local temp=settleprice*exp_risk_days
 
 	local delta,gamma,vega,thetha,rho=0,0,0,0,0
-	if otp_type=="Call" then
+	
+	if opt_type=="Call" then
 		delta=exp_risk_days*normdistr_d1
 		gamma=100*normalDistrDensity(log_settle_strike)/(settleprice*volatility*sqrt_pdays)
 		thetha=(-1*(temp*normdistrdens_d1*volatility)/(2*sqrt_pdays)+risk_free*temp*normdistr_d1-risk_free*strike*temp*normdistr_d2)/yearLength
 		vega=settleprice*normdistrdens_d1*exp_risk_days*sqrt_pdays/100
-		rho=pdaystomate*strikeexp_risk_days*normdistr_d2/100
+		rho=pdaystomate*strike*exp_risk_days*normdistr_d2/100
 	else
 		delta=-1*exp_risk_days*normdistr_minus_d1
 		gamma=100*normalDistrDensity(log_settle_strike)/(settleprice*volatility*sqrt_pdays)
@@ -146,11 +149,18 @@ function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 		vega=settleprice*normdistrdens_d1*exp_risk_days*sqrt_pdays/100
 		rho=-1*pdaystomate*strike*exp_risk_days*normdistr_minus_d2/100
 	end
+	local d11=(math.log(settleprice/strike)+volatility*volatility*0.5*pdaystomate)/(volatility*math.sqrt(pdaystomate))
+	if opt_type=="Call" then
+		del1=math.exp(-1*risk_free*pdaystomate)*normalDistr(d11)
+	else
+		del1=-1*math.exp(-1*risk_free*pdaystomate)*normalDistr(-1*d11)
+	end
+	toLog(log,'type='..opt_type..' strike='..strike..'delta='..delta..' del1='..del1)
 	return delta,gamma,vega,thetha,rho
 end
 --quik callbacks
 function OnFuturesClientHolding(hold)
-	if is_run and hold~=nil --[[and string.find(hold.trdaccid,'SPBFUT')~=nil]] then
+	if is_run and hold~=nil and (filter_acc=='' or string.find(filter_acc,hold.trdaccid)~=nil) then
 		toLog(log,'New holding update')
 		table.insert(futures_holding,hold)
 	end
@@ -188,20 +198,25 @@ function calcYield(settleprice,strike,opt_type,amount,premium)
 end
 function buildPlot(trdacc,base)
 	local pl=portfolios_list[trdacc][base]
-	plot=iup.pplot{title='Yeild to mate',MARGINBOTTOM="65", MARGINLEFT="65", AXS_XLABEL="Strike", AXS_YLABEL="Yield", LEGENDSHOW="YES", LEGENDPOS="TOPLEFT"}
-	gui[trdacc][base].plot_dialog=iup.dialog{plot,size='200x200',title='Yield to mate plot '..trdacc..':'..base}
-	iup.PPlotBegin(plot, 0)
 	local last=getParam(base,'last')
-	--last=882.2
 	local strike_step=base_contract_info[base].strike_step
 	local center=math.ceil(last/strike_step)*strike_step
+	plot=iup.pplot{title='Yeild to mate',MARGINBOTTOM="65", MARGINLEFT="65", AXS_XLABEL="Strike", AXS_YLABEL="Yield", LEGENDSHOW="YES", LEGENDPOS="TOPLEFT", GRID='YES', AXS_YCROSSORIGIN='NO',AXS_XCROSSORIGIN='NO'}
+	gui[trdacc][base].plot_dialog=iup.dialog{plot,size='200x200',title='Yield to mate plot '..trdacc..':'..base}
+	iup.PPlotBegin(plot, 0)
+	
+	--last=882.2
+	local max_yield=0
+	local min_yield=99999999999999
 	for step=center-3*strike_step,center+3*strike_step,strike_step do
 		yield=0
 		for k,v in pairs(pl) do
 			if type(v)=='table' and v.totalnet~=0 then
 				if v.opt_type=='Futures' then strike=last else strike=v.strike end
 				yield=yield+calcYield(step,strike,v.opt_type,v.totalnet,getParam(k,'theorprice'))
-				--toLog(log,k..' y='..yield)
+				--toLog(log,k..' y'..yield)
+				max_yield=math.max(yield,max_yield)
+				min_yield=math.min(yield,min_yield)
 			end
 		end
 		iup.PPlotAdd(plot, step, yield)
@@ -209,6 +224,21 @@ function buildPlot(trdacc,base)
 	end
 	gui[trdacc][base].plot_dataset_index=iup.PPlotEnd(plot)
 	plot.ds_legend=trdacc..':'..base
+	-- zero-Y line
+	iup.PPlotBegin(plot,0)
+	iup.PPlotAdd(plot,center-3*strike_step,0)
+	iup.PPlotAdd(plot,center+3*strike_step,0)
+	toLog(log,'zeroy index='..iup.PPlotEnd(plot))
+	plot.ds_legend='Zero line'
+	plot.ds_color='0 0 0'
+	-- zero-X line
+	iup.PPlotBegin(plot,0)
+	iup.PPlotAdd(plot,last,max_yield)
+	iup.PPlotAdd(plot,last,min_yield)
+	toLog(log,'center index='..iup.PPlotEnd(plot))
+	plot.ds_legend='Current price'
+	plot.ds_color='0 0 0'
+	
 	if gui[trdacc][base].plot_dialog.visible=='NO' then gui[trdacc][base].plot_dialog:show() end
 end
 -- our functions
@@ -230,7 +260,7 @@ function OnInitDo()
 	--toLog(log,getNumberOf('futures_client_holding'))
 	for i=0,getNumberOf('futures_client_holding') do
 		row=getItem('futures_client_holding',i)
-		if row.trdaccid~='' and row.type==0 --[[and string.find(row.trdaccid,'SPBFUT')~=nil]] then
+		if row.trdaccid~='' and row.type==0 and (filter_acc=='' or string.find(filter_acc,row.trdaccid)~=nil) then
 			updatePortfoliosList(row)
 			toLog(log,"Account "..row.trdaccid.." added to data.")
 			toLog(log,row)
@@ -363,8 +393,8 @@ end
 function calculateGreeks(acc,base)
 	toLog(log,'calculations started')
 	local pl=portfolios_list[acc][base]
-	local class=''
-	local opttype,volat,stryke,sprice,pdtm
+	--local class=''
+	--local opttype,volat,stryke,sprice,pdtm
 	pl.delta=0
 	pl.gamma=0
 	pl.vega=0
@@ -386,12 +416,13 @@ function calculateGreeks(acc,base)
 				pdtm=v.days_to_mate
 				]]
 				--toLog(log,k.." Position Base="..base.." type="..opttype..' BasePrice='..sprice..' Volat='..volat..' Strike='..strike..' pdtm='..pdtm)
-				local d,g,veg,t,r=allGreeks(v.opt_type,getParam(base,'last'),v.strike,getParam(k,'volatility')/100,v.days_to_mate,risk_free)
-				pl.delta=pl.delta+d
-				pl.gamma=pl.gamma+g
-				pl.vega=pl.vega+veg
-				pl.theta=pl.theta+t
-				pl.rho=pl.rho+r
+				local d,g,veg,t,r=allGreeks(v.opt_type,getParam(base,'last'),v.strike,getParam(k,'volatility')/100,v.days_to_mate,riskFreeRate)
+				toLog(log,k..' d='..d..' gam='..g..' type='..v.opt_type..' strike='..v.strike)
+				pl.delta=pl.delta+v.totalnet*d
+				pl.gamma=pl.gamma+v.totalnet*g
+				pl.vega=pl.vega+v.totalnet*veg
+				pl.theta=pl.theta+v.totalnet*t
+				pl.rho=pl.rho+v.totalnet*r
 				--[[
 				pl.delta=pl.delta+v.totalnet*delta(opttype,sprice,strike,volat,pdtm,riskFreeRate)
 				pl.gamma=pl.gamma+v.totalnet*gammap(sprice,strike,volat,pdtm,riskFreeRate)
