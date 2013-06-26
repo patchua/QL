@@ -24,7 +24,7 @@ rho_col_name='Rho'
 vm_col_name='Var Margin'
 acc_col_name='Account'
 basec_col_name='Base Contract'
-filter_acc='FOUX_102'
+filter_acc=''
 -- GUI
 tbl=QTable:new()
 --plot=iup.pplot{title='Yeild to mate',MARGINBOTTOM="65", MARGINLEFT="65", AXS_XLABEL="Strike", AXS_YLABEL="Yield", LEGENDSHOW="YES", LEGENDPOS="TOPLEFT"}

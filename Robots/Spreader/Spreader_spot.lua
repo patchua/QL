@@ -414,12 +414,12 @@ function OnOrder(order)
 				toLog(log,"New BID status="..bid_status)
 			end
 			if (bid_status=="open" or bid_status=="remote" or bid_status=='cancellopen' or bid_status=='cancellremote') then
+				local bask=getParamEx(class,security,"OFFER").param_value
+				local price=0
 				bid_open_status=bid_status
 				bid_open_price=order.price
 				bid_bad_price=bask-step
 				bid_bad=false
-				local bask=getParamEx(class,security,"OFFER").param_value
-				local price=0
 				if bask-step>bid_open_price+minprofit*step then price=bask-step else price=bid_open_price+minprofit*step end
 				toLog(log,"Send close order. open_price="..bid_open_price.." close_price="..price)
 				local id,ms=sendLimit(class,security,"S",price,volume,account,clc,"SpreaderCB")
@@ -489,12 +489,12 @@ function OnOrder(order)
 				toLog(log,"New ASK status="..ask_status)
 			end
 			if (ask_status=="open" or ask_status=="remote" or ask_status=='cancellopen' or ask_status=='cancellremote') then
+				local bbid=getParamEx(class,security,"BID").param_value
+				local price=0
 				ask_open_status=ask_status
 				ask_open_price=order.price
 				ask_bad_price=bbid+step
 				ask_bad=false
-				local bbid=getParamEx(class,security,"BID").param_value
-				local price=0
 				if bbid+step<ask_open_price-minprofit*step then price=bbid+step else price=ask_open_price-minprofit*step end
 				toLog(log,"Send close order. open_price="..ask_open_price.." close_price="..price)
 				local id,ms=sendLimit(class,security,"B",price,volume,account,clc,"SpreaderCA")
