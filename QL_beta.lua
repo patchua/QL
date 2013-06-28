@@ -928,16 +928,16 @@ function QTable:SetValue(row, col_name, data, formatted)
 	end
 end
 function QTable:AddLine(key)
-    -- добавл€ет в конец таблицы пустую строчку и возвращает ее номер
-	local lkey=nil
-	if key==nil then lkey=-1 else lkey=key end
-	local res=InsertRow(self.t_id, lkey)
-	if res==-1 then return nil else self.curr_line=self.curr_line+1 return res end
+   -- добавл€ет пустую строчку в место key или в конец таблицы и возвращает ее номер
+   local line=InsertRow(self.t_id, key or -1)
+   if line==-1 then return nil else self.curr_line=self.curr_line+1 table.insert(self.data,line,{}) return line end
 end
 function QTable:DeleteLine(key)
-	self.curr_line=self.curr_line-1
-	if key==nil then return false end
-	return DeleteRow(self.t_id,key)
+   -- удал€ет строчку в месте key или в конце таблицы
+   key = key or self.curr_line
+   self.curr_line=self.curr_line-1
+   table.remove(self.data,key)
+   return DeleteRow(self.t_id,key)
 end
 function QTable:GetSize()
      -- возвращает размер таблицы, количество строк и столбцов
@@ -1219,14 +1219,14 @@ function table2string(table)
 	return str
 end
 function getHRTime()
-	-- возвращает врем€ с милисекундами в виде строки
-	local now=socket.gettime()
-	return string_format("%s,%3d",os.date("%X",now),select(2,math.modf(now))*1000)
+   -- возвращает врем€ с милисекундами в виде строки
+   local now=socket.gettime()
+   return string.format("%s,%03d",os.date("%X",now),select(2,math.modf(now))*1000)
 end
 function getHRDateTime()
-	-- ¬озвращает строку с текущей датой и врем€ с милисекундами
-	local now=socket.gettime()
-	return string_format("%s,%3d",os.date("%c",now),select(2,math.modf(now))*1000)
+   -- ¬озвращает строку с текущей датой и врем€ с милисекундами
+   local now=socket.gettime()
+   return string.format("%s,%03d",os.date("%c",now),select(2,math.modf(now))*1000)
 end
 function toPrice(security,value)
 	-- преобразовани€ значени€ value к цене инструмента правильного ‘ќ–ћј“ј (обрезаем лишнии знаки после разделител€)
