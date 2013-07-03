@@ -34,6 +34,7 @@ empty_str=[[
 	<clc value="0" />
 	<bidEnable value="0" />
 	<askEnable value="0" />
+	<pos_from_beg value="1" />
 </table>
 ]]
 
@@ -50,7 +51,7 @@ function getSettings(path)
 	end 
 	toLog(log,"File oppened")
 	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
-	file:find("volume").value,file:find("account").value,file:find("clc").value=
+	file:find("pos_from_beg").value,file:find("volume").value,file:find("account").value,file:find("clc").value=
       iup.GetParam("Begemot "..VERSION, nil,
                   "Код бумаги: %s\n"..
 				  "Разрешить торговлю от Аска: %b\n"..
@@ -58,11 +59,12 @@ function getSettings(path)
 				  "Объем бегемота для Бид: %i\n"..
 				  "Объем бегемота для Аск : %i\n"..
 				  "Тэйк-профит (в шагах цены): %i\n"..
+				  "Отступ от бегемота для открывающей заявки (в шагах цены): %i\n"..
 				  "Объем заявок: %i\n"..
 				  "Номер счета: %s\n"..
 				  "Код клиента: %s\n",
 				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
-	file:find("volume").value,file:find("account").value,file:find("clc").value)
+	file:find("pos_from_beg").value,file:find("volume").value,file:find("account").value,file:find("clc").value)
 	toLog(log,"GetSettingsParam done")
 	if (not ret) then
 		iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
@@ -81,6 +83,7 @@ function getSettings(path)
 	watch_list.client_code=file:find("clc").value
 	watch_list.bidEnable=tonumber(file:find("bidEnable").value)
 	watch_list.offerEnable=tonumber(file:find("askEnable").value)
+	watch_list.pos_from_beg=tonumber(file:find("pos_from_beg").value)
 	watch_list.position_bid=0
 	watch_list.position_offer=0
 	watch_list.status_bid=""
@@ -146,9 +149,9 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,boffer,boffer_volume,soffer
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="wait" end
 		toLog(log,ms)
 	-- если бегемот появился и "условия"- выставить заявку
-	elseif new_begbid~=0 and watch_list.status_bid=="" and (new_begoffer==0 or new_begoffer>new_begbid+(1+watch_list.tp)*watch_list.minstep) then
+	elseif new_begbid~=0 and watch_list.status_bid=="" and (new_begoffer==0 or new_begoffer>new_begbid+(watch_list.pos_from_beg+watch_list.tp)*watch_list.minstep) then
 		toLog(log,"BId. если бегемот появился и условия- выставить заявку")
-		local trid,ms=sendLimit(watch_list.class,code,"B",toPrice(code,new_begbid+watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOB")
+		local trid,ms=sendLimit(watch_list.class,code,"B",toPrice(code,new_begbid+watch_list.pos_form_beg*watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOB")
 		if trid~=nil then	transactions[trid]="bid" watch_list.status_bid="waitopen" watch_list.trans_bid=trid end
 		toLog(log,ms)
 	-- если бегемот передвинулся - передвинуть заявку
@@ -198,9 +201,9 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,bbid,bbid_volume,sbid,c
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="wait" end
 		toLog(log,ms)
 	-- если бегемот появился и "условия"- выставить заявку
-	elseif new_begoffer~=0 and watch_list.status_offer=="" and (new_begbid==0 or new_begbid<new_begoffer-(1+watch_list.tp)*watch_list.minstep) then
+	elseif new_begoffer~=0 and watch_list.status_offer=="" and (new_begbid==0 or new_begbid<new_begoffer-(watch_list.pos_from_beg+watch_list.tp)*watch_list.minstep) then
 		toLog(log,"Offer. если бегемот появился и условия- выставить заявку")
-		local trid,ms=sendLimit(watch_list.class,code,"S",toPrice(code,new_begoffer-watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOO")
+		local trid,ms=sendLimit(watch_list.class,code,"S",toPrice(code,new_begoffer-watch_list.pos_from_beg*watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOO")
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitopen" watch_list.trans_offer=trid end
 		toLog(log,ms)
 	-- если бегемот передвинулся - передвинуть заявку

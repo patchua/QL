@@ -1,4 +1,4 @@
-LIBVERSION='0.5.2.3'
+LIBVERSION='0.5.2.4'
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -29,35 +29,27 @@ LIGHT_RED=8421631
 -- for custom colors you may use this tool http://www.colorspire.com/rgb-color-wheel/
 
 -- terminal versions globals
-VERSIONLESS6713=true
+VERSIONLESS6713=false
+VERSIONLESS660118=false
 TERMINAL_VERSION=getInfoParam('VERSION')
-
+local ordernumberfieldname='order_num'
+local securityfiledname='sec_code'
 function versionLess(ver1,ver2)
-	local _,dot1=string_gsub(ver1,'%.','')
-	local _,dot2=string_gsub(ver2,'%.','')
-	if dot1<dot2 then return false end
-	if dot1>dot2 then return true end
-	local v1={}
-	local v2={}
-	local i=1
-	local j
-	for a in string_gmatch(ver1,'%d+') do
-		v1[i]=0+a
-		i=i+1
-	end
-	i=1
-	for a in string_gmatch(ver2,'%d+') do
-		v2[i]=0+a
-		i=i+1
-	end
-	for j=1,i-1 do
-		if v1[j]<v2[j] then return true end
+	local begin,ver_1=0
+	for ver_2 in string_gmatch(ver2,'%d+') do
+		_,begin,ver_1=string_find(ver1,'(%d+)',begin+1)
+		if ver_1~=ver_2 then return not ver_1 or ver_1+0<ver_2+0 end
 	end
 	return false
 end
 if versionLess(TERMINAL_VERSION,'6.7.1.3') then
 	require"bit"
 	VERSIONLESS6713=true
+end
+if versionLess(TERMINAL_VERSION,'6.6.0.118') then
+	VERSIONLESS660118=true
+	ordernumberfieldname='ordernum'
+	securityfiledname='seccode'
 end
 if DEFAULT_COLOR==nil then DEFAULT_COLOR=-1 end
 --if QTABLE_NO_INDEX==nil then QTABLE_NO_INDEX=-1 end
@@ -79,14 +71,14 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 	-- execution_condition может принимать 2 варианта - FILL_OR_KILL(Немедленно или отклонить),KILL_BALANCE(Снять остаток). Если параметр не указан то по умолчанию Поставить в очередь. ВНИМАНИЕ! Работает ТОЛЬКО на срочном рынке!
 	-- expire_date - указывается для переноса заявок на срочном рынке
 	-- market_maker - признак заявки маркет-мейкера. true\false
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
 		return nil,"QL.sendLimitFO(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -112,7 +104,7 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		transaction['Переносить заявку']='Да'
 		transaction['Дата экспирации']=tostring(expire_date)
 	end
-	if execution_condition~=nil then 
+	if execution_condition~=nil then
 		if string_upper(execution_condition)=='FILL_OR_KILL' then
 			transaction["Условие исполнения"]='Немедленно или отклонить'
 		elseif string_upper(execution_condition)=='KILL_BALANCE' then
@@ -135,14 +127,14 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
 	-- если код клиента нил - подлставляем счет
 	-- market_maker - признак заявки маркет-мейкера. true\false
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
 		return nil,"QL.sendLimitSpot(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -180,14 +172,14 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	-- отправка рыночной заявки
 	-- все параметры кроме кода клиента и коментария должны быть не нил
 	-- если код клиента нил - подлставляем счет
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil  or volume==nil or account==nil) then
 		return nil,"QL.sendMarket(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -232,14 +224,14 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
 	-- если код клиента нил - подлставляем счет
 	-- если время жизни не указано - то заявка "До Отмены"
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -281,14 +273,14 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
 	-- если код клиента нил - подлставляем счет
 	-- если время жизни не указано - то заявка "До Отмены"
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -332,14 +324,14 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 	-- все параметры кроме кода клиента,коментария и времени жизни должны быть не нил
 	-- если код клиента нил - подлставляем счет
 	-- если время жизни не указано - то заявка "До Отмены"
-	-- Данная функция возвращает 2 параметра 
+	-- Данная функция возвращает 2 параметра
 	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
 	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or offset==nil or offsetunits==nil or deffspread==nil or deffspreadunits==nil) then
 		return nil,"QL.sendTake(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -387,7 +379,7 @@ function moveOrder(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if (fo_number==nil or fo_p==nil or mode==nil) then
 		return nil,"QL.moveOrder(): Can`t move order. Nil parameters."
 	end
-	local forder=getRowFromTable("orders","order_num",fo_number)
+	local forder=getRowFromTable("orders",ordernumberfieldname,fo_number)
 	if forder==nil then
 		return nil,"QL.moveOrder(): Can`t find order_number="..fo_number.." in orders table!"
 	end
@@ -407,7 +399,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	if (fo_number==nil or fo_p==nil) then
 		return nil,"QL.moveOrderSpot(): Can`t move order. Nil parameters."
 	end
-	local forder=getRowFromTable("orders","order_num",fo_number)
+	local forder=getRowFromTable("orders",ordernumberfieldname,fo_number)
 	if forder==nil then
 		return nil,"QL.moveOrderSpot(): Can`t find order_number="..fo_number.." in orders table!"
 	end
@@ -418,25 +410,25 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если MODE=0, то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
 		--В торговую систему отправляются две новые заявки, при этом изменяется только цена заявок, количество остается прежним;
 		if so_number~=nil and so_p~=nil then
-			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
+			_,ms=killOrder(fo_number,forder[securityfiledname],forder.class_code)
 			--toLog("ko.txt",ms)
-			trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
-			local sorder=getRowFromTable("orders","order_num",so_number)
+			trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
+			local sorder=getRowFromTable("orders",ordernumberfieldname,so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
-			_,ms=killOrder(so_number,sorder.seccode,sorder.class_code)
+			_,ms=killOrder(so_number,sorder[securityfiledname],sorder.class_code)
 			--toLog("ko.txt",ms)
-			trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,so_p,tostring(sorder.balance),sorder.account,sorder.client_code,sorder.comment)
+			trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,so_p,tostring(sorder.balance),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 			else
 				return nil,"QL.moveOrderSpot(): One or more orders not moved! Msg1="..ms1.." Msg2="..ms2
 			end
 		else
-			_,ms=killOrder(fo_number,forder.seccode,forder.class_code)
+			_,ms=killOrder(fo_number,forder[securityfiledname],forder.class_code)
 			--toLog("ko.txt",ms)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(forder.balance),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -447,22 +439,22 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если MODE=1, то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
 		--В торговую систему отправляются две новые заявки, при этом изменится как цена заявки, так и количество;
 		if so_number~=nil and so_p~=nil and so_q~=nil then
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
-			local sorder=getRowFromTable("orders","order_num",so_number)
+			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
+			local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			local sorder=getRowFromTable("orders",ordernumberfieldname,so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
-			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
-			local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
+			_,_=killOrder(so_number,sorder[securityfiledname],sorder.class_code)
+			local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,toPrice(sorder[securityfiledname],so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 			else
 				return nil,"QL.moveOrderSpot(): One or more orders not moved! Msg1="..ms1.." Msg2="..ms2
 			end
 		else
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
+			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -473,15 +465,15 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--Если MODE=2,  то заявки с номерами, указанными после ключей FIRST_ORDER_NUMBER и SECOND_ORDER_NUMBER, снимаются. 
 		--Если количество бумаг в каждой из снятых заявок совпадает со значениями, указанными после FIRST_ORDER_NEW_QUANTITY и SECOND_ORDER_NEW_QUANTITY, то в торговую систему отправляются две новые заявки с соответствующими параметрами.
 		if so_number~=nil and so_p~=nil and so_q~=nil then
-			local sorder=getRowFromTable("orders","order_num",so_number)
+			local sorder=getRowFromTable("orders",ordernumberfieldname,so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			_,_=killOrder(so_number,sorder.seccode,sorder.class_code)
+			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
+			_,_=killOrder(so_number,sorder[securityfiledname],sorder.class_code)
 			if forder.balance==fo_q and sorder.balance==so_q then
-				local trid,ms1=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
-				local trid2,ms2=sendLimit(sorder.class_code,sorder.seccode,orderflags2table(sorder.flags).operation,toPrice(sorder.seccode,so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
+				local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+				local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,toPrice(sorder[securityfiledname],so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 				if trid~=nil and trid2~=nil then
 					return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 				else
@@ -491,8 +483,8 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 				return nil,"QL.moveOrderSpot(): Mode=2. Orders balance~=new_quantity"
 			end
 		else
-			_,_=killOrder(fo_number,forder.seccode,forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder.seccode,orderflags2table(forder.flags).operation,toPrice(forder.seccode,fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
+			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -550,17 +542,17 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		return nil,"QL.moveOrder(): Mode out of range! mode can be from {0,1,2}"
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
-	local order=getRowFromTable("orders","order_num",fo_number)
+	local order=getRowFromTable("orders",ordernumberfieldname,fo_number)
 	if order==nil then
 		return nil,"QL.moveOrderFO(): Can`t find order_number="..fo_number.." in orders table!"
 	end
 	transaction["TRANS_ID"]=tostring(trans_id)
 	transaction["CLASSCODE"]=order.class_code
-	transaction["SECCODE"]=order.seccode
+	transaction["SECCODE"]=order[securityfiledname]
 	transaction["ACTION"]="MOVE_ORDERS"
 
 	--toLog("move.txt",transaction)
@@ -577,7 +569,7 @@ function sendRPS(class,security,direction,price,volume,account,client_code,partn
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -612,7 +604,7 @@ function sendReportOnRPS(class,operation,key)
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -639,7 +631,7 @@ function killOrder(orderkey,security,class)
 		return nil,"QL.killOrder(): Can`t kill order. OrderKey nil or zero"
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -648,17 +640,14 @@ function killOrder(orderkey,security,class)
 		["ACTION"]="KILL_ORDER",
 		["ORDER_KEY"]=tostring(orderkey)
 	}
-	if (security==nil and class==nil) or (class~=nil and security==nil) then
-		local order=getRowFromTable("orders","order_num",orderkey)
+	if security then
+		transaction.seccode=security
+		transaction.classcode=class or getSecurityInfo("",security).class_code
+	else
+		local order=getRowFromTable("orders",ordernumberfieldname,orderkey)
 		if order==nil then return nil,"QL.killOrder(): Can`t kill order. No such order in Orders table." end
 		transaction.classcode=order.class_code
-		transaction.seccode=order.seccode
-	elseif	security~=nil then
-		transaction.seccode=security
-		transaction.classcode=getSecurityInfo("",security).class_code
-	else
-		transaction.seccode=security
-		transaction.classcode=class 
+		transaction.seccode=order[securityfiledname]
 	end
 	--toLog("ko.txt",transaction)
 	local res=sendTransaction(transaction)
@@ -677,7 +666,7 @@ function killStopOrder(orderkey,security,class)
 		return nil,"QL.killStopOrder(): Can`t kill order. OrderKey nil or zero"
 	end
 	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime())
+		math_randomseed(socket.gettime()*10000)
 		NOTRANDOMIZED=false
 	end
 	local trans_id=math_random(2000000000)
@@ -687,16 +676,16 @@ function killStopOrder(orderkey,security,class)
 		["STOP_ORDER_KEY"]=tostring(orderkey)
 	}
 	if (security==nil and class==nil) or (class~=nil and security==nil) then
-		local order=getRowFromTable("stop_orders","order_num",orderkey)
+		local order=getRowFromTable("stop_orders",ordernumberfieldname,orderkey)
 		if order==nil then return nil,"QL.killStopOrder(): Can`t kill order. No such order in StopOrders table." end
 		transaction.classcode=order.class_code
-		transaction.seccode=order.seccode
+		transaction.seccode=order[securityfiledname]
 	elseif	security~=nil then
 		transaction.seccode=security
 		transaction.classcode=getSecurityInfo("",security).class_code
 	else
 		transaction.seccode=security
-		transaction.classcode=class 
+		transaction.classcode=class
 	end
 	--toLog("ko.txt",transaction)
 	if string_find(FUT_OPT_CLASSES,transaction.classcode)~=nil then transaction['BASE_CONTRACT']=getParamEx(transaction.classcode,transaction.seccode,'optionbase').param_image end
@@ -737,7 +726,7 @@ function killAllOrders(table_mask)
 		end
 		if tokill then
 			--toLog(log,"kill onum"..row.order_num)
-			res,ms=killOrder(tostring(row.order_num),row.seccode,row.class_code)
+			res,ms=killOrder(tostring(row.order_num),row[securityfiledname],row.class_code)
 			result_num=result_num+1
 			--toLog(log,ms)
 			if res then
@@ -778,7 +767,7 @@ function killAllStopOrders(table_mask)
 		end
 		if tokill then
 			--toLog(log,"kill onum"..row.order_num)
-			res,ms=killStopOrder(tostring(row.order_num),row.seccode,row.class_code)
+			res,ms=killStopOrder(tostring(row.order_num),row[securityfiledname],row.class_code)
 			result_num=result_num+1
 			--toLog(log,ms)
 			if res then
@@ -798,7 +787,7 @@ function getPosition(security,account)
 	--futures
 		for i=0,getNumberOf("futures_client_holding") do
 			local row=getItem("futures_client_holding",i)
-			if row~=nil and row.seccode==security and row.trdaccid==account then
+			if row~=nil and row[securityfiledname]==security and row.trdaccid==account then
 				if row.totalnet==nil then
 					return 0
 				else
@@ -811,8 +800,8 @@ function getPosition(security,account)
 		--toLog(log,'posnum='..getNumberOf("depo_limits"))
 		for i=0,getNumberOf("depo_limits") do
 			local row=getItem("depo_limits",i)
-			toLog(log,row)
-			if row~=nil and row.seccode==security and row.client_code==account then
+			--toLog(log,row)
+			if row~=nil and row[securityfiledname]==security and row.client_code==account then
 				if row.currentbal==nil then
 					return 0
 				else
@@ -825,27 +814,31 @@ function getPosition(security,account)
 end
 --[[
 Quik Table class QTable
+-- only for Quik version 6.6+
 ]]
 QTable ={}
 QTable.__index = QTable
 function QTable:new()
      -- Создать и инициализировать экземпляр таблицы QTable
+	 if VERSIONLESS660118 then message("QTable: Quik Tables available ONLY in Quik 6.6+ version!",1) return nil end
 	 local t_id = AllocTable()
-     if t_id ~= nil then
-         q_table = {}
-         setmetatable(q_table, QTable)
-         q_table.t_id=t_id
-         q_table.caption = ""
-         q_table.created = false
-		 q_table.curr_col=0
-		 q_table.curr_line=0
-         --таблица с описанием параметров столбцов
-         q_table.columns={}
+     if t_id then
+        q_table = {}
+        setmetatable(q_table, QTable)
+        q_table.t_id=t_id
+        q_table.caption = ""
+        q_table.created = false
+		q_table.curr_col=0
+		q_table.curr_line=0
+        --таблица с описанием параметров столбцов
+        q_table.columns={}
+		--таблица с данными столбцов
+		q_table.data={}
          return q_table
      else
          return nil
      end
-end                
+end
 function QTable:Show()
      -- отобразить в терминале окно с созданной таблицей
      CreateWindow(self.t_id)
@@ -889,11 +882,11 @@ function QTable:AddColumn(name, c_type, width, ff )
 	self.columns[name] = col_desc
     -- name используется в качестве заголовка таблицы
     return AddColumn(self.t_id, self.curr_col, name, true, c_type, width)
-end 
+end
 function QTable:Clear()
      -- очистить таблицу
      return Clear(self.t_id)
-end 
+end
 function QTable:SetValue(row, col_name, data, formatted)
 	-- Установить значение в ячейке
 	local col_ind = self.columns[col_name].id or nil
@@ -901,10 +894,13 @@ function QTable:SetValue(row, col_name, data, formatted)
 		return false
 	end
 	local col_type = self.columns[col_name].c_type
-	
+	if self.data[row][col_ind]==data then return true end
+	self.data[row][col_ind]=data
+	local col_type = self.columns[col_name].c_type
+	-- если для числового столбца дано НЕчисловое значение, то применяем к нему tonumber
 	if type(data) ~= "number" and (col_type==QTABLE_INT_TYPE or col_type==QTABLE_DOUBLE_TYPE or col_type==QTABLE_INT64_TYPE) then
-      data = tonumber(data) or 0
-    end
+		data = tonumber(data) or 0
+	end
 	-- если для НЕстрокового значения уже дан отформатированный вариант, то сначала используется он
 	if formatted and col_type~=QTABLE_STRING_TYPE and col_type~=QTABLE_CACHED_STRING_TYPE then
 		return SetCell(self.t_id, row, col_ind, formatted, data)
@@ -978,17 +974,17 @@ function QTable:SetColor(row,col_name,b_color,f_color,sel_b_color,sel_f_color)
 	-- set color for cell, row or column
 	if VERSIONLESS6713 then return false end
 	local col_ind,row_ind=nil,nil
-	toLog(log,'setcol params='..tostring(row)..tostring(col_name)..tostring(b_color))
+	--toLog(log,'setcol params='..tostring(row)..tostring(col_name)..tostring(b_color))
 	if row==nil then row_ind=QTABLE_NO_INDEX else row_ind=row end
-	if col_name==nil then col_ind=QTABLE_NO_INDEX 
-	else 
+	if col_name==nil then col_ind=QTABLE_NO_INDEX
+	else
 		col_ind = self.columns[col_name].id
 		if col_ind == nil then
 			message('QTable.SetColor(): No such column name - '..col_name)
 			return false
 		end
 	end
-	toLog(log,'SetColors row:col='..tostring(row_ind)..':'..tostring(col_ind)..' - '..tostring(b_color)..tostring(f_color)..tostring(sel_b_color)..tostring(sel_f_color))
+	--toLog(log,'SetColors row:col='..tostring(row_ind)..':'..tostring(col_ind)..' - '..tostring(b_color)..tostring(f_color)..tostring(sel_b_color)..tostring(sel_f_color))
 	local bcnum,fcnum,selbcnum,selfcnum=0,0,0,0
 	if b_color==nil or b_color=='DEFAULT_COLOR' then bcnum=16777215 else bcnum=RGB2number(b_color) end
 	if f_color==nil or f_color=='DEFAULT_COLOR' then fcnum=0 else fcnum=RGB2number(f_color) end
@@ -1001,8 +997,8 @@ function QTable:Highlight(row,col_name,b_color,f_color,timeout)
 	if VERSIONLESS6713 then return false end
 	local col_ind,row_ind=nil,nil
 	if row==nil then row_ind=QTABLE_NO_INDEX else row_ind=row end
-	if col_name==nil then col_ind=QTABLE_NO_INDEX 
-	else 
+	if col_name==nil then col_ind=QTABLE_NO_INDEX
+	else
 		col_ind = self.columns[col_name].id
 		if col_ind == nil then
 			message('QTable.Highlight(): No such column name - '..col_name)
@@ -1012,17 +1008,17 @@ function QTable:Highlight(row,col_name,b_color,f_color,timeout)
 	local bcnum,fcnum=0,0
 	if b_color==nil or b_color=='DEFAULT_COLOR' then bcnum=16777215 else bcnum=RGB2number(b_color) end
 	if f_color==nil or f_color=='DEFAULT_COLOR' then fcnum=0 else fcnum=RGB2number(f_color) end
-	toLog(log,'High par='..tostring(row)..tostring(col_name)..tostring(b_color)..tostring(f_color)..tostring(timeout))
-	toLog(log,'HP2 ='..row_ind..col_ind..' b='..bcnum..' f='..fcnum..' t='..timeout)
+	--toLog(log,'High par='..tostring(row)..tostring(col_name)..tostring(b_color)..tostring(f_color)..tostring(timeout))
+	--toLog(log,'HP2 ='..row_ind..col_ind..' b='..bcnum..' f='..fcnum..' t='..timeout)
 	return Highlight(self.t_id,row_ind,col_ind,bcnum,fcnum,timeout)
 end
 function QTable:StopHighlight(row,col_name)
-	-- отмена подсветки 
+	-- отмена подсветки
 	if VERSIONLESS6713 then return false end
 	local col_ind,row_ind=nil,nil
 	if row==nil then row_ind=QTABLE_NO_INDEX else row_ind=row end
-	if col_name==nil then col_ind=QTABLE_NO_INDEX 
-	else 
+	if col_name==nil then col_ind=QTABLE_NO_INDEX
+	else
 		col_ind = self.columns[col_name].id
 		if col_ind == nil then
 			message('QTable.StopHighlight(): No such column name - '..col_name)
@@ -1088,7 +1084,7 @@ function crossOver(bar,chart_name1,val2,parameter,line1,line2)
 	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
 	local par=parameter or 'close'
-	toLog(log,'par='..par)
+	--toLog(log,'par='..par)
 	if type(val2)=='string' then
 		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)		
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
@@ -1183,7 +1179,7 @@ function getParam(security,param_name)
 end
 function toLog(file_path,value)
 	-- запись в лог параметра value
-	-- value может быть числом, строкой или таблицей 
+	-- value может быть числом, строкой или таблицей
 	-- file_path  -  путь к файлу
 	-- файл открывается на дозапись и закрывается после записи строки
 	if file_path~=nil and value~=nil then
@@ -1221,12 +1217,12 @@ end
 function getHRTime()
    -- возвращает время с милисекундами в виде строки
    local now=socket.gettime()
-   return string.format("%s,%03d",os.date("%X",now),select(2,math.modf(now))*1000)
+   return string_format("%s,%03d",os.date("%X",now),select(2,math.modf(now))*1000)
 end
 function getHRDateTime()
    -- Возвращает строку с текущей датой и время с милисекундами
    local now=socket.gettime()
-   return string.format("%s,%03d",os.date("%c",now),select(2,math.modf(now))*1000)
+   return string_format("%s,%03d",os.date("%c",now),select(2,math.modf(now))*1000)
 end
 function toPrice(security,value)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
@@ -1251,7 +1247,7 @@ function getPosFromTable(table,value)
 end
 function orderflags2table(flags)
 	-- фнукция возвращает таблицу с полным описанием заявки по флагам
-	--[[ Атрибуты : 
+	--[[ Атрибуты :
 	active, cancelled, done,operation("B" for Buy, "S" for Sell),limit(true - limit order, false - market order),
 	mte(Возможно исполнение заявки несколькими сделками),fill_or_kill(Исполнить заявку немедленно или снять),
 	mmorder(Заявка маркет-мейкера. Для адресных заявок –заявка отправлена контрагенту),received(Для адресных заявок –заявка получена от контрагента),
@@ -1261,8 +1257,8 @@ function orderflags2table(flags)
 	local band=bit.band
 	--local tobit=bit.tobit
 	if band(flags,1)~=0 then t.active=true	else t.active = false end
-	if band(flags,2)~=0 then t.cancelled=true 
-	else	
+	if band(flags,2)~=0 then t.cancelled=true
+	else
 		if not t.active then t.done=true else t.done=false end
 		t.cancelled=false
 	end
@@ -1289,7 +1285,7 @@ function tradeflags2table(flags)
 end
 function stoporderflags2table(flags)
 	-- фнукция возвращает таблицу с полным описанием стоп-заявки по флагам
-	--[[ Атрибуты : 
+	--[[ Атрибуты :
 	active, cancelled, done,operation("B" for Buy, "S" for Sell),limit(true - limit order, false - market order),
 	mte(Возможно исполнение заявки несколькими сделками),wait_activation(Стоп-заявка ожидает активации),
 	another_server(Стоп-заявка с другого сервера),tplopf(Устанавливается в случае стоп-заявки типа тейк-профита по заявке, в случае когда исходная заявка частично исполнена и по выставленной тейк-профит заявке на исполненную часть заявки выполнилось условие активации),
@@ -1301,8 +1297,8 @@ function stoporderflags2table(flags)
 	local band=bit.band
 	--local tobit=bit.tobit
 	if band(flags, 1)~=0 then t.active=true else t.active = false end
-	if band(flags,2)~=0 then t.cancelled=true 
-	else	
+	if band(flags,2)~=0 then t.cancelled=true
+	else
 		if not t.active then t.done=true else t.done=false end
 		t.cancelled=false
 	end
@@ -1321,7 +1317,7 @@ function stoporderflags2table(flags)
 end
 function stoporderextflags2table(flags)
 	-- фнукция возвращает таблицу с дополнительнім описанием стоп-заявки по флагам
-	--[[ Атрибуты : 
+	--[[ Атрибуты :
 	userest(Использовать остаток основной заявки), cpf(При частичном исполнении заявки снять стоп-заявку), asolopf(Активировать стоп-заявку при частичном исполнении связанной заявки),
 	percent(Отступ задан в процентах, иначе – в пунктах цены),defpercent(Защитный спред задан в процентах, иначе – в пунктах цены),
 	this_day(Срок действия стоп-заявки ограничен сегодняшним днем),interval(Установлен интервал времени действия стоп-заявки),
@@ -1428,12 +1424,7 @@ function getSTime()
 end
 function getLTime()
 	-- возвращает текущее время компьютера в виде числа формата HHMMSS
-	local t=os.date('*t')
-	local a=""
-	if string_len(tostring(t.hour))<2 then a='0'..t.hour else a=t.hour end
-	if string_len(tostring(t.min))<2 then a=a..'0'..t.min else a=a..t.min end
-	if string_len(tostring(t.sec))<2 then a=a..'0'..t.sec else a=a..t.sec end
-	return tonumber(a)
+	return os.date("%H%M%S")
 end
 function getDate()
 	-- возвращает текущую торговую дату в виде числа формата YYYYMMDD
@@ -1458,7 +1449,7 @@ function isTradeTime(exchange, shift)
 end
 function datetime2string(dt)
 	-- преобразует обьект datetime в строку формата YYYYMMDDHHMMSS
-	local s='' 
+	local s=''
 	if string_len(tostring(dt.year))<4 then s=s..'20'..dt.year else s=s..dt.year end
 	if string_len(tostring(dt.month))<2 then s=s..'0'..dt.month else s=s..dt.month end
 	if string_len(tostring(dt.day))<2 then s=s..'0'..dt.day else s=s..dt.day end
@@ -1487,34 +1478,35 @@ function datetimediff(t1,t2)
 	return (((((t2.year-t1.year)*12+t2.month-t1.month)*30+t2.day-t1.day)*24+t2.hour-t1.hour)*60+t2.min-t1.min)*60+t2.sec-t1.sec
 	--return math.abs(d)
 end
--- number formatting 
+-- number formatting
 function formatNumber(amount)
-  -- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
-  local formatted = amount or 0
-  while true do
-    formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
-    if (k==0) then break end
-  end
-  return formatted
+	-- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
+	local formatted, k = amount
+	while k~=0 do
+		formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", "%1 %2")
+	end
+	return formatted
 end
 function formatNumber0(amount)
-  -- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
-  -- перед этим округляет число до целого
-  local formatted = math_floor((amount or 0)+0.5)
-  while true do
-    formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
-    if (k==0) then break end
-  end
-  return formatted
+	-- разделяет строку с входящим числом разделенным на разряды (100000 --> 100 000)
+	-- перед этим округляет число до целого
+	local formatted, k = math_floor((amount or 0)+0.5)
+	while k~=0 do
+		formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", "%1 %2")
+	end
+	return formatted
 end
 function formatNumber2(amount, scale)
-   -- разделяет строку с входящим числом разделенным на разряды (1000000 --> 1 000 000)
-   -- так же заполняется определенное кол-во знаков после запятой
-   -- если кол-во знаков после запятой не указывается, то берется 2 знака
-   local formatted = string_format("%."..(scale or 2).."f",amount or 0)
-   while true do
-      formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", '%1 %2')
-      if (k==0) then break end
-   end
-   return formatted
+	-- разделяет строку с входящим числом разделенным на разряды (1000000 --> 1 000 000)
+	-- так же заполняется определенное кол-во знаков после запятой
+	-- если кол-во знаков после запятой не указывается, то берется 2 знака
+	local formatted, k = string_format("%."..(scale or 2).."f",amount or 0)
+	while k~=0 do
+		formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", "%1 %2")
+	end
+	return formatted
+end
+function checkVersion(version)
+-- проверяем не ниже ли версия терсминала квик переданной
+	return versionLess(TERMINAL_VERSION,version)
 end

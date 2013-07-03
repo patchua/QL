@@ -66,7 +66,7 @@ function OnTransReply(reply)
 end
 function OnOrder(order)
 	if order.trans_id==last_send_tr then
-		if bit.band(bit.tobit(order.flags),0x1)~=0  then
+		if bit.band(bit.tobit(order.flags),1)~=0  then
 			if last_cancell_tr==-666 then
 				toLog(log,'Order received')
 				orders[index].ord_receive_time=os.clock()
