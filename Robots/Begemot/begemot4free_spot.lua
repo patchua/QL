@@ -34,6 +34,7 @@ empty_str=[[
 	<clc value="0" />
 	<bidEnable value="0" />
 	<askEnable value="0" />
+	<class value=" " />
 	<pos_from_beg value="1" />
 </table>
 ]]
@@ -50,10 +51,11 @@ function getSettings(path)
 		file=xml.eval(empty_str)
 	end 
 	toLog(log,"File oppened")
-	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+	ret, file:find("security").value,file:find('class').value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
 	file:find("pos_from_beg").value,file:find("volume").value,file:find("account").value,file:find("clc").value=
       iup.GetParam("Begemot "..VERSION, nil,
                   "Код бумаги: %s\n"..
+				  "Код класса: %s\n"..
 				  "Разрешить торговлю от Аска: %b\n"..
 				  "Разрешить торговлю от Бида: %b\n"..
 				  "Объем бегемота для Бид: %i\n"..
@@ -63,7 +65,7 @@ function getSettings(path)
 				  "Объем заявок: %i\n"..
 				  "Номер счета: %s\n"..
 				  "Код клиента: %s\n",
-				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
+				  file:find("security").value,file:find('class').value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
 	file:find("pos_from_beg").value,file:find("volume").value,file:find("account").value,file:find("clc").value)
 	toLog(log,"GetSettingsParam done")
 	if (not ret) then
@@ -74,7 +76,7 @@ function getSettings(path)
 	end
 	file:save(path)
 	watch_list.code=file:find("security").value
-	watch_list.class=getSecurityInfo('',watch_list.code).class_code
+	watch_list.class=file:find("class").value
 	watch_list.volume_offer=tonumber(file:find("volume_offer").value)
 	watch_list.volume_bid=tonumber(file:find("volume_bid").value)
 	watch_list.tp=tonumber(file:find("takeprofit").value)

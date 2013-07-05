@@ -14,7 +14,7 @@ local string_lower=string.lower
 local string_len=string.len
 local string_sub=string.sub
 local string_upper=string.upper
-local NOTRANDOMIZED=true
+local RANDOM_SEED=socket.gettime()*10000
 
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
 DATETIME_MIN_VALUE={['day']=1,['week_day']=1,['hour']=0,['ms']=0,['min']=0,['month']=1,['sec']=0,['year']=1700}
@@ -77,11 +77,8 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
 		return nil,"QL.sendLimitFO(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+	
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="Ввод заявки",
@@ -133,11 +130,8 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil) then
 		return nil,"QL.sendLimitSpot(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_ORDER",
@@ -178,11 +172,8 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	if (class==nil or security==nil or direction==nil  or volume==nil or account==nil) then
 		return nil,"QL.sendMarket(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_ORDER",
@@ -230,11 +221,8 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -279,11 +267,8 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	if (class==nil or security==nil or direction==nil or stopprice==nil or volume==nil or account==nil or dealprice==nil) then
 		return nil,"QL.sendStop(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -330,11 +315,8 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or offset==nil or offsetunits==nil or deffspread==nil or deffspreadunits==nil) then
 		return nil,"QL.sendTake(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_STOP_ORDER",
@@ -541,11 +523,8 @@ function moveOrderFO(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 	else
 		return nil,"QL.moveOrder(): Mode out of range! mode can be from {0,1,2}"
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local order=getRowFromTable("orders",ordernumberfieldname,fo_number)
 	if order==nil then
 		return nil,"QL.moveOrderFO(): Can`t find order_number="..fo_number.." in orders table!"
@@ -568,11 +547,8 @@ function sendRPS(class,security,direction,price,volume,account,client_code,partn
 	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or account==nil or partner==nil) then
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_NEG_DEAL",
@@ -603,11 +579,8 @@ function sendReportOnRPS(class,operation,key)
 		return nil,"QL.sendRPS(): Can`t send order. Nil parameters."
 	end
 	--local trans_id=tostring(math.ceil(os.clock()))..tostring(math.random(os.clock()))
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="NEW_REPORT",
@@ -630,11 +603,8 @@ function killOrder(orderkey,security,class)
 	if orderkey==nil or tonumber(orderkey)==0 then
 		return nil,"QL.killOrder(): Can`t kill order. OrderKey nil or zero"
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="KILL_ORDER",
@@ -665,11 +635,8 @@ function killStopOrder(orderkey,security,class)
 	if orderkey==nil or tonumber(orderkey)==0 then
 		return nil,"QL.killStopOrder(): Can`t kill order. OrderKey nil or zero"
 	end
-	if NOTRANDOMIZED then
-		math_randomseed(socket.gettime()*10000)
-		NOTRANDOMIZED=false
-	end
-	local trans_id=math_random(2000000000)
+
+	local trans_id=random_max()
 	local transaction={
 		["TRANS_ID"]=tostring(trans_id),
 		["ACTION"]="KILL_STOP_ORDER",
@@ -1509,4 +1476,29 @@ end
 function checkVersion(version)
 -- проверяем не ниже ли версия терсминала квик переданной
 	return versionLess(TERMINAL_VERSION,version)
+end
+-- randomizers
+function random(m,n)
+	-- возвращает случайное целое от m до n
+	local res=(16807*(RANDOM_SEED or 137137))%2147483647
+	RANDOM_SEED=res
+	res=res*4.6566128752458E-10
+	if n and m then res=math_floor(res*(n-m+1))+m else if m then res=math_floor(res*m)+1 end end
+	return res
+end
+function random1()
+	-- не принимает параметры и возвращает от 0 до 1
+	local res=(16807*(RANDOM_SEED or 137137))%2147483647
+	RANDOM_SEED=res
+	res=res*4.6566128752458E-10
+	return res
+end
+function random_max()
+	-- не принимает параметры и возвращает от 0 до 2147483647 (макс. полож. 32 битное число) подходит нам для транзакций
+	local res=(16807*(RANDOM_SEED or 137137))%2147483647
+	RANDOM_SEED=res
+	return res
+end
+function randomseed(x)
+	RANDOM_SEED=math_floor(tonumber(x))
 end
