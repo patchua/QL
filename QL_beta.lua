@@ -88,7 +88,7 @@ function sendLimitFO(class,security,direction,price,volume,account,comment,execu
 		["Класс"]=class,
 		["Инструмент"]=security,
 		["Количество"]=string_format("%d",tostring(volume)),
-		["Цена"]=toPrice(security,price),
+		["Цена"]=toPrice(security,price,class),
 		["Торговый счет"]=tostring(account)
 	}
 	if direction=='B' then transaction['К/П']='Покупка' else transaction['К/П']='Продажа' end
@@ -139,7 +139,7 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["QUANTITY"]=string_format("%d",tostring(volume)),
-		["PRICE"]=toPrice(security,price),
+		["PRICE"]=toPrice(security,price,class),
 		["ACCOUNT"]=tostring(account)
 	}
 	if client_code==nil then
@@ -191,9 +191,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	end
 	if string_find(FUT_OPT_CLASSES,class)~=nil then
 		if direction=="B" then
-			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMAX").param_value)
+			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMAX").param_value,class)
 		else
-			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMIN").param_value)
+			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMIN").param_value,class)
 		end
 	else
 		transaction.price="0"
@@ -230,8 +230,8 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["QUANTITY"]=string_format("%d",tostring(volume)),
-		["STOPPRICE"]=toPrice(security,stopprice),
-		["PRICE"]=toPrice(security,dealprice),
+		["STOPPRICE"]=toPrice(security,stopprice,class),
+		["PRICE"]=toPrice(security,dealprice,class),
 		["ACCOUNT"]=tostring(account)
 	}
 	if client_code==nil then
@@ -276,8 +276,8 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
 		["QUANTITY"]=string_format("%d",tostring(volume)),
-		["STOPPRICE"]=toPrice(security,stopprice),
-		["PRICE"]=toPrice(security,dealprice),
+		["STOPPRICE"]=toPrice(security,stopprice,class),
+		["PRICE"]=toPrice(security,dealprice,class),
 		["ACCOUNT"]=tostring(account)
 	}
 	if client_code==nil then
@@ -325,7 +325,7 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		["STOP_ORDER_KIND"]='TAKE_PROFIT_STOP_ORDER',
 		["OPERATION"]=direction,
 		["QUANTITY"]=string_format("%d",tostring(volume)),
-		["STOPPRICE"]=toPrice(security,price),
+		["STOPPRICE"]=toPrice(security,price,class),
 		["OFFSET_UNITS"]=offsetunits,
 		["SPREAD_UNITS"]=deffspreadunits,
 		["OFFSET"]=tonumber(offset),
@@ -422,13 +422,13 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 		--В торговую систему отправляются две новые заявки, при этом изменится как цена заявки, так и количество;
 		if so_number~=nil and so_p~=nil and so_q~=nil then
 			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
-			local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			local sorder=getRowFromTable("orders",ordernumberfieldname,so_number)
 			if sorder==nil then
 				return nil,"QL.moveOrderSpot(): Can`t find order_number="..so_number.." in orders table!"
 			end
 			_,_=killOrder(so_number,sorder[securityfiledname],sorder.class_code)
-			local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,toPrice(sorder[securityfiledname],so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
+			local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,so_p,tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 			if trid~=nil and trid2~=nil then
 				return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 			else
@@ -436,7 +436,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -454,8 +454,8 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
 			_,_=killOrder(so_number,sorder[securityfiledname],sorder.class_code)
 			if forder.balance==fo_q and sorder.balance==so_q then
-				local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
-				local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,toPrice(sorder[securityfiledname],so_p),tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
+				local trid,ms1=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(fo_q),forder.account,forder.client_code,forder.comment)
+				local trid2,ms2=sendLimit(sorder.class_code,sorder[securityfiledname],orderflags2table(sorder.flags).operation,so_p,tostring(so_q),sorder.account,sorder.client_code,sorder.comment)
 				if trid~=nil and trid2~=nil then
 					return trid2,"QL.moveOrderSpot(): Orders moved. Trans_id1="..trid.." Trans_id2="..trid2
 				else
@@ -466,7 +466,7 @@ function moveOrderSpot(mode,fo_number,fo_p,fo_q,so_number,so_p,so_q)
 			end
 		else
 			_,_=killOrder(fo_number,forder[securityfiledname],forder.class_code)
-			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,toPrice(forder[securityfiledname],fo_p),tostring(fo_q),forder.account,forder.client_code,forder.comment)
+			local trid,ms=sendLimit(forder.class_code,forder[securityfiledname],orderflags2table(forder.flags).operation,fo_p,tostring(fo_q),forder.account,forder.client_code,forder.comment)
 			if trid~=nil then
 				return trid,"QL.moveOrderSpot(): Order moved. Trans_Id="..trid
 			else
@@ -1133,10 +1133,10 @@ function getSecurityClass(classes_list,sec_code)
    end
    return nil
 end
-function getParam(security,param_name)
-	--вызывает стандартную функцию getParamEx. Автоматически находит код класса. возвращает значение в правильном формате. В случае ошибки возвращает диагностику вторым аргументом
+function getParam(security,param_name,class)
+	--вызывает стандартную функцию getParamEx. Автоматически находит код класса если он не указан. возвращает значение в правильном формате. В случае ошибки возвращает диагностику вторым аргументом
 	if security==nil or security=='' or param_name==nil or param_name=='' then return nil,'Bad arguments' end
-	local t=getParamEx(getSecurityInfo('',security).class_code,security,param_name)
+	local t=getParamEx(class or getSecurityInfo('',security).class_code,security,param_name)
 	if t.result~='1' then return nil,param_name..' for '..security..' nor found' end
 	if t.param_type=='3' then
 		return t.param_image
@@ -1191,11 +1191,11 @@ function getHRDateTime()
    local now=socket.gettime()
    return string_format("%s,%03d",os.date("%c",now),select(2,math.modf(now))*1000)
 end
-function toPrice(security,value)
+function toPrice(security,value,class)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
 	if (security==nil or value==nil) then return nil end
-	local scale=getParamEx(getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
+	local scale=getParamEx(class or getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
 	return string_format("%."..string_format("%d",scale).."f",tonumber(value))
 end
 function getPosFromTable(table,value)
