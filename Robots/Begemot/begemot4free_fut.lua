@@ -1,4 +1,4 @@
--- version 0.4.3
+-- version 0.5.0
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
@@ -7,13 +7,14 @@
 -- 0.4.1 new condition for close order
 -- 0.4.2 interface at settings load
 -- 0.4.3 bug in close
+-- GUI & initialization method changed
 require"QL"
-require"luaxml"
+--require"luaxml"
 require'iuplua'
-VERSION='0.4.2'
-log="begemot.log"
-settings_file="settings.xml"
-watch_list={}
+VERSION='0.5.0'
+log="begemot4free.log"
+settings_file="settings.lua"
+--watch_list={}
 transactions={}
 quotes={}
 orders={}
@@ -22,36 +23,37 @@ on_param={}
 trans_replies={}
 bad_transactions={}
 is_run=false
-empty_str=[[
-<table>
-	<security value=" " />
-	<volume_offer value="0" />
-	<volume_bid value="0" />
-	<takeprofit value="0" />
-	<volume value="0" />
-	<account value="0" />
-	<clc value="0" />
-	<bidEnable value="0" />
-	<askEnable value="0" />
-</table>
-]]
+tbl=QTable:new()
 
+
+function setStatus(type)
+	if type=='Bid' then tbl:SetValue(watch_list.line,'BidStatus',watch_list.status_bid) end
+	if type=='Offer' then tbl:SetValue(watch_list.line,'OfferStatus',watch_list.status_offer) end
+end
 function getSettings(path)
 	toLog(log,"Try to open settings "..path)
 	local f=io.open(path)
-	if f==nil then toLog(log,'1111') f=io.open(path,"w") f:close() else f:close() end
-	local file=xml.load(path)
-	toLog(log,"XML loaded")
-	if file==nil then
-		--message("Begemot can`t open settings file!",3)
+	if f==nil then 
 		toLog(log,"File can`t be openned! File would be created.")
-		file=xml.eval(empty_str)
-	end 
-	toLog(log,"File oppened")
-	ret, file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
-	file:find("volume").value,file:find("account").value,file:find("clc").value=
-      iup.GetParam("Begemot "..VERSION, nil,
+		watch_list={}
+		watch_list.code=' '
+		watch_list.class=' '
+		watch_list.volume_offer=0
+		watch_list.volume_bid=0
+		watch_list.tp=0
+		watch_list.volume=0
+		watch_list.account=' '
+		watch_list.client_code=' '
+		watch_list.bidEnable=0
+		watch_list.offerEnable=0
+	else f:close() dofile(path) end
+	toLog(log,"settings loaded")
+	toLog(log,watch_list)
+	ret, watch_list.code,watch_list.class,watch_list.offerEnable,watch_list.bidEnable,watch_list.volume_bid,watch_list.volume_offer,watch_list.tp,
+	watch_list.volume,watch_list.account,watch_list.client_code=
+      iup.GetParam("Begemot4Free "..VERSION, nil,
                   "Код бумаги: %s\n"..
+				  "Код класса: %s\n"..
 				  "Разрешить торговлю от Аска: %b\n"..
 				  "Разрешить торговлю от Бида: %b\n"..
 				  "Объем бегемота для Бид: %i\n"..
@@ -60,26 +62,15 @@ function getSettings(path)
 				  "Объем заявок: %i\n"..
 				  "Номер счета: %s\n"..
 				  "Код клиента: %s\n",
-				  file:find("security").value,file:find("askEnable").value,file:find("bidEnable").value,file:find("volume_offer").value,file:find("volume_bid").value,file:find("takeprofit").value,
-	file:find("volume").value,file:find("account").value,file:find("clc").value)
+				  watch_list.code,watch_list.class,watch_list.offerEnable,watch_list.bidEnable,watch_list.volume_bid,watch_list.volume_offer,watch_list.tp,
+	watch_list.volume,watch_list.account,watch_list.client_code)
 	toLog(log,"GetSettingsParam done")
 	if (not ret) then
-		iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
+		--iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
+		message("Begemot4Free "..VERSION.." Запуск скрипта отменен.",3)
 		toLog(log,"Cancelled on GetSettingsParam")
-		do_main=false
-		return
+		return false
 	end
-	file:save(path)
-	watch_list.code=file:find("security").value
-	watch_list.class=getSecurityInfo('',watch_list.code).class_code
-	watch_list.volume_offer=tonumber(file:find("volume_offer").value)
-	watch_list.volume_bid=tonumber(file:find("volume_bid").value)
-	watch_list.tp=tonumber(file:find("takeprofit").value)
-	watch_list.volume=tonumber(file:find("volume").value)
-	watch_list.account=file:find("account").value
-	watch_list.client_code=file:find("clc").value
-	watch_list.bidEnable=tonumber(file:find("bidEnable").value)
-	watch_list.offerEnable=tonumber(file:find("askEnable").value)
 	watch_list.position_bid=0
 	watch_list.position_offer=0
 	watch_list.status_bid=""
@@ -93,6 +84,18 @@ function getSettings(path)
 	watch_list.bad_bid=false
 	watch_list.bad_offer=false
 	watch_list.minstep=getParamEx(watch_list.class,watch_list.code,"SEC_PRICE_STEP").param_value
+	tbl:SetCaption("Begemot "..VERSION)
+	tbl:AddColumn('Security',QTABLE_CACHED_STRING_TYPE,15)
+	tbl:AddColumn('BidEnable',QTABLE_CACHED_STRING_TYPE,15)
+	tbl:AddColumn('BidStatus',QTABLE_STRING_TYPE,15)
+	tbl:AddColumn('OfferEnable',QTABLE_CACHED_STRING_TYPE,15)
+	tbl:AddColumn('OfferStatus',QTABLE_STRING_TYPE,15)
+	tbl:Show()
+	local l=tbl:AddLine()
+	watch_list.line=l
+	tbl:SetValue(l,'Security',watch_list.code)
+	if watch_list.bidEnable==1 then tbl:SetValue(l,'BidEnable','Включен') tbl:SetColor(l,'BidEnable',LIGHT_GREEN,nil,LIGHT_GREEN,nil) else tbl:SetValue(l,'BidEnable','Выключен') end
+	if watch_list.offerEnable==1 then tbl:SetValue(l,'OfferEnable','Включен') tbl:SetColor(l,'OfferEnable',LIGHT_GREEN,nil,LIGHT_GREEN,nil) else tbl:SetValue(l,'OfferEnable','Выключен') end
 	toLog(log,"Settings loaded")
 	toLog(log,watch_list)
 	return true
@@ -144,37 +147,37 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,soffer,sec_code)
 	if watch_list.status_bid=="open" and new_begbid==0 then
 		toLog(log,"Bid. если бегемот исчез и есть заявка на открытие - снять ")
 		local trid,ms=killOrder(watch_list.order_bid.ordernum)
-		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="wait" end
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="wait" setStatus('Bid') end
 		toLog(log,ms)
 	-- если бегемот появился и "условия"- выставить заявку
 	elseif new_begbid~=0 and watch_list.status_bid=="" and (new_begoffer==0 or new_begoffer>new_begbid+(1+watch_list.tp)*watch_list.minstep) then
 		toLog(log,"BId. если бегемот появился и условия- выставить заявку")
 		local trid,ms=sendLimit(watch_list.class,sec_code,"B",toPrice(sec_code,new_begbid+watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOpenBid")
-		if trid~=nil then	transactions[trid]="bid" watch_list.status_bid="waitopen" watch_list.trans_bid=trid end
+		if trid~=nil then	transactions[trid]="bid" watch_list.status_bid="waitopen" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
 	-- если бегемот передвинулся - передвинуть заявку
 	elseif new_begbid~=0 and cur_begbid~=0 and cur_begbid~=new_begbid and watch_list.status_bid=="open" then
 		toLog(log,"Bid. если бегемот передвинулся - передвинуть заявку. num="..watch_list.order_bid.ordernum.." pr="..toPrice(sec_code,new_begbid+watch_list.minstep))
 		local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,new_begbid+watch_list.minstep))
-		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitopen" watch_list.trans_bid=trid end
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitopen" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
 	-- если стоим на закрытие и ниже повился бегемот - передвигаемся под него
 	elseif watch_list.status_bid=="close" and new_begoffer<watch_list.order_bid.price and new_begoffer~=0 and (not watch_list.bad_bid) then
 		toLog(log,"BId. если стоим на закрытие и ниже повился бегемот - передвигаемся под него")
 		local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,new_begoffer-watch_list.minstep))
-		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
 	-- если стоим на закрытие и бегемота нет и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
 	elseif watch_list.status_bid=="close" and watch_list.order_bid.price<soffer-watch_list.minstep and watch_list.order_bid.qty==boffer_volume then
 		toLog(log,"BId. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
-		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
 	-- если стоим на закрытие, прошла сделка хуже и перед нами появилась заявка - переставится
 	elseif watch_list.status_bid=='close' and watch_list.bad_bid and boffer<watch_list.order_bid.price then
 		toLog(log,"Bid. если стоим на закрытие, прошла сделка хуже и перед нами появилась заявка - переставится")
 		trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,boffer-watch_list.minstep))
-		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
 	end
 	--toLog(log,"TradeBid ended. "..(os.clock()-st))
@@ -188,37 +191,37 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,sbid,sec_code)
 	if watch_list.status_offer=="open" and new_begoffer==0 then
 		toLog(log,"Offer. если бегемот исчез и есть заявка на открытие - снять ")
 		local trid,ms=killOrder(watch_list.order_offer.ordernum)
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="wait" end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="wait" setStatus('Offer') end
 		toLog(log,ms)
 	-- если бегемот появился и "условия"- выставить заявку
 	elseif new_begoffer~=0 and watch_list.status_offer=="" and (new_begbid==0 or new_begbid<new_begoffer-(1+watch_list.tp)*watch_list.minstep) then
 		toLog(log,"Offer. если бегемот появился и условия- выставить заявку")
 		local trid,ms=sendLimit(watch_list.class,sec_code,"S",toPrice(sec_code,new_begoffer-watch_list.minstep),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotOpenOffer")
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitopen" watch_list.trans_offer=trid end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitopen" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
 	-- если бегемот передвинулся - передвинуть заявку
 	elseif new_begoffer~=0 and cur_begoffer~=0 and cur_begoffer~=new_begoffer and watch_list.status_offer=="open" then
 		toLog(log,"Offer. если бегемот передвинулся - передвинуть заявку. num="..watch_list.order_offer.ordernum.." pr="..toPrice(sec_code,new_begoffer-watch_list.minstep))
 		local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,new_begoffer-watch_list.minstep))
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitopen" watch_list.trans_offer=trid end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitopen" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
 	-- если стоим на закрытие и ниже повился бегемот - передвигаемся под него
 	elseif watch_list.status_offer=="close" and new_begbid>watch_list.order_offer.price and new_begbid~=0 then
 		toLog(log,"Offer. если стоим на закрытие и ниже повился бегемот - передвигаемся под него")
 		local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,new_begbid+watch_list.minstep))
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
 	-- если стоим на закрытие и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
 	elseif watch_list.status_offer=="close" and watch_list.order_offer.price>sbid+watch_list.minstep and watch_list.order_offer.qty==bbid_volume then
 		toLog(log,"Offer. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,sbid+watch_list.minstep))
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
 	-- если стоим на закрытие, прошла сделка хуже и перед нами появилась заявка - переставится
 	elseif watch_list.status_offer=='close' and watch_list.bad_offer and bbid>watch_list.order_offer.price then
 		toLog(log,"Offer. если стоим на закрытие, прошла сделка хуже и перед нами появилась заявка - переставится")
 		trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,bbid+watch_list.minstep))
-		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
 	end
 	--toLog(log,"Trade Offer ended. "..(os.clock()-st))
@@ -273,7 +276,7 @@ end
 function OnQuoteDo(class_code,sec_code)
 	local st=os.clock()
 	local ql2=getQuoteLevel2(class_code,sec_code)
-	if ql2==nil then toLog(log,"------- Can`t get glass for "..class_code..sec_code) is_run=false return end
+	if ql2==nil or tonumber(ql2.offer_count)==0 or tonumber(ql2.bid_count)==0 then toLog(log,"------- Can`t get glass for "..class_code..sec_code) is_run=false return end
 	local begbid,begoffer=0,0
 	if ql2.bid_count~=0 and watch_list.volume_bid~=0 then begbid=findBegemot("bid",ql2.bid,ql2.bid_count,sec_code)	end
 	if ql2.offer_count~=0 and watch_list.volume_offer~=0 then begoffer=findBegemot("offer",ql2.offer,ql2.offer_count,sec_code)	end
@@ -316,6 +319,7 @@ function OnOrderDo(order)
 			watch_list.order_bid={}
 			watch_list.order_bid=order
 			watch_list.status_bid=string.gsub(watch_list.status_bid,"wait","")
+			setStatus('Bid')
 		end
 		if order.balance==0 then
 			transactions[order.trans_id]=""
@@ -329,18 +333,20 @@ function OnOrderDo(order)
 				watch_list.order_bid={}
 				watch_list.order_bid=order
 				watch_list.status_bid=string.gsub(watch_list.status_bid,"wait","")
+				setStatus('Bid')
 			end
 			if watch_list.status_bid=="open" or watch_list.status_bid=="" then
 				watch_list.open_price_bid=order.price
 				local pr=FindBidClosePrice(order.seccode,order.price)
 				local trid,ms=sendLimit(order.class_code,order.seccode,"S",toPrice(order.seccode,pr),watch_list.volume,watch_list.account,watch_list.client_code,"BegemotCloseBid")
-				if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+				if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 				toLog(log,ms)
 			elseif watch_list.status_bid=="close" then
 				toLog(log,"Start new cycle.")
 				watch_list.order_bid={}
 				watch_list.open_price_bid=0
 				watch_list.status_bid=""
+				setStatus('Bid')
 				watch_list.bad_bid=false
 			end
 		end
@@ -355,6 +361,7 @@ function OnOrderDo(order)
 			watch_list.order_offer={}
 			watch_list.order_offer=order
 			watch_list.status_offer=string.gsub(watch_list.status_offer,"wait","")
+			setStatus('Offer')
 		end
 		if order.balance==0 then
 			transactions[order.trans_id]=""
@@ -367,12 +374,13 @@ function OnOrderDo(order)
 				watch_list.order_offer={}
 				watch_list.order_offer=order
 				watch_list.status_offer=string.gsub(watch_list.status_offer,"wait","")
+				setStatus('Offer')
 			end
 			if watch_list.status_offer=="open" or watch_list.status_offer=="" then
 				watch_list.open_price_offer=order.price
 				local pr=FindOfferClosePrice(order.seccode,order.price)
 				local trid,ms=sendLimit(order.class_code,order.seccode,"B",toPrice(order.seccode,pr),watch_list.volume,watch_list.account,watch_list.client_code,"closeoffer")
-				if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+				if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer') end
 				toLog(log,ms)
 			elseif watch_list.status_offer=="close" then
 				toLog(log,"Start new cycle.")
@@ -380,6 +388,7 @@ function OnOrderDo(order)
 				watch_list.open_price_offer=0
 				watch_list.status_offer=""
 				watch_list.bad_offer=false
+				setStatus('Offer')
 			end
 		end
 		--if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
@@ -410,7 +419,7 @@ function OnAllTradeDo(trade)
 		if watch_list.order_bid.price>bask then
 			toLog(log,"Move order to be first")
 			local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(watch_list.code,bask-watch_list.minstep))
-			if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid end
+			if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 			toLog(log,ms)
 		end
 	end
@@ -421,7 +430,7 @@ function OnAllTradeDo(trade)
 		if watch_list.order_offer.price<bbid then
 			toLog(log,"Move order to be first")
 			local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(watch_list.code,bbid+watch_list.minstep))
-			if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid end
+			if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer') end
 			toLog(log,ms)
 		end
 	end
@@ -447,30 +456,9 @@ end
 function OnInitDo()
 	is_run=getSettings(getScriptPath().."\\"..settings_file)
 	toLog(log,"Is_run="..tostring(is_run))
-	--[[
-	if is_run then
-		toLog(log,"Start prepare")
-		local class_code=getSecurityInfo("",watch_list.code).class_code
-		toLog(log,class_code)
-		local ql2=getQuoteLevel2(class_code,watch_list.code)
-		toLog(log,"stakan found")
-		local begbid,begoffer=0,0
-		if ql2.bid_count~=0 and watch_list.volume_bid~=0 then
-			begbid=findBegemot("bid",ql2.bid,ql2.bid_count,watch_list.code)
-		end
-		if ql2.offer_count~=0 and watch_list.volume_offer~=0 then
-			begoffer=findBegemot("offer",ql2.offer,ql2.offer_count,watch_list.code)
-		end
-		toLog(log,begbid)
-		toLog(log,begoffer)
-		TradeBid(0,begbid,begoffer,watch_list.code)
-		TradeOffer(0,begoffer,begbid,watch_list.code)
-		watch_list.position_bid=begbid
-		watch_list.position_offer=begoffer
-	end
-	]]--
 	is_run=true
 	toLog(log,"Initialization finished. ")
+	if is_run then OnQuoteDo(watch_list.class,watch_list.code) end
 end
 
 function OnStop()
@@ -502,13 +490,6 @@ function OnOrder(order)
 		toLog(log,"Nil update on Order")
 	end
 end
---[[function OnAllTrade(trade)
-	if is_run and watch_list.code==trade.seccode then
-		table.insert(all_trades,trade)
-	elseif trade==nil then
-		toLog(log,"Nil update on AllTrade")
-	end
-end]]
 function OnParam(pclass,psec)
 	if not is_run or psec~=watch_list.code then return end
 	local t=tonumber(getParamEx(pclass,psec,"LAST").param_value)
@@ -545,9 +526,11 @@ function main()
 		elseif #on_param~=0 then
 			local trade=table.remove(on_param,1)
 			if trade~=nil then OnAllTradeDo(trade) else toLog(log,"Nil trade on remove") end
+		elseif tbl:IsClosed() then tbl:Show()
 		else
 			sleep(1)
 		end
 	end
 	toLog(log,"Main ended")
+	iup.Close()
 end
