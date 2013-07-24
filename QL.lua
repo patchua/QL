@@ -1,4 +1,5 @@
-LIBVERSION='0.5.2.4'
+LIBVERSION='0.5.2.5'
+LIBVERSIONINT=525
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -1168,19 +1169,6 @@ function toLog(file_path,value)
 		end
 	end
 end
-function table2string(table)
-	local k,v,str=0,0,""
-	for k,v in pairs(table) do
-		if type(v)=="string" or type(v)=="number" then
-			str=str..k.."="..v..';'
-		elseif type(v)=="table"then
-			str=str..k.."={"..table2string(v).."};"
-		elseif type(v)=="function" or type(v)=='boolean' then
-			str=str..k..'='..tostring(v)..';'
-		end
-	end
-	return str
-end
 function getHRTime()
    -- возвращает время с милисекундами в виде строки
    local now=socket.gettime()
@@ -1197,20 +1185,6 @@ function toPrice(security,value,class)
 	if (security==nil or value==nil) then return nil end
 	local scale=getParamEx(class or getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
 	return string_format("%."..string_format("%d",scale).."f",tonumber(value))
-end
-function getPosFromTable(table,value)
-	-- Возвращает ключ значения value из таблицы table, иначе -1
-	if (table==nil or value==nil) then
-		return -1
-	else
-		local k,v
-		for k,v in pairs(table) do
-			if v==value then
-				return k
-			end
-		end
-		return -1
-	end
 end
 function orderflags2table(flags)
 	-- фнукция возвращает таблицу с полным описанием заявки по флагам
@@ -1314,17 +1288,6 @@ function bit_set( flags, index )
        return false
     end
 end
-function getRowFromTable(table_name,key,value)
-	-- возвращаем строку (таблицу Луа) из таблицы table_name с столбцом key равным value.
-	-- table_name[key].value
-	local i
-	for i=getNumberOf(table_name)-1,0,-1 do
-		if getItem(table_name,i)[key]==value then
-			return getItem(table_name,i)
-		end
-	end
-	return nil
-end
 function HiResTimer()
 -- переделка модуля http://lua-users.org/wiki/HiResTimer
 -- предоставляет оооочень точный таймер
@@ -1425,6 +1388,54 @@ function datetime2string(dt)
 	if string_len(tostring(dt.sec))<2 then s=s..'0'..dt.sec else s=s..dt.sec end
 	return s
 end
+function datetimediff(t1,t2)
+	-- возвращает разницу в секундах между t2 и t1 (оба стандартного типа datetime библиотеки qlua)
+	return (((((t2.year-t1.year)*12+t2.month-t1.month)*30+t2.day-t1.day)*24+t2.hour-t1.hour)*60+t2.min-t1.min)*60+t2.sec-t1.sec
+	--return math.abs(d)
+end
+-- string & table helpers
+function trim(s)
+	-- убирает пробелы в начале и в конце строки
+	return s:match'^%s*(.*%S)' or ''
+end
+function table2string(table)
+	local k,v,str=0,0,""
+	for k,v in pairs(table) do
+		if type(v)=="string" or type(v)=="number" then
+			str=str..k.."="..v..';'
+		elseif type(v)=="table"then
+			str=str..k.."={"..table2string(v).."};"
+		elseif type(v)=="function" or type(v)=='boolean' then
+			str=str..k..'='..tostring(v)..';'
+		end
+	end
+	return str
+end
+function getPosFromTable(table,value)
+	-- Возвращает ключ значения value из таблицы table, иначе -1
+	if (table==nil or value==nil) then
+		return -1
+	else
+		local k,v
+		for k,v in pairs(table) do
+			if v==value then
+				return k
+			end
+		end
+		return -1
+	end
+end
+function getRowFromTable(table_name,key,value)
+	-- возвращаем строку (таблицу Луа) из таблицы table_name с столбцом key равным value.
+	-- table_name[key].value
+	local i
+	for i=getNumberOf(table_name)-1,0,-1 do
+		if getItem(table_name,i)[key]==value then
+			return getItem(table_name,i)
+		end
+	end
+	return nil
+end
 function isEqual(tbl1,tbl2)
     -- возвращает true если таблицы tbl1 и tbl2 полснотью совпадают
 	if isSubTable(tbl1,tbl2) and isSubTable(tbl2,tbl1) then return true else return false end
@@ -1439,11 +1450,6 @@ function isSubTable(sub,main)
         end
     end
 	return true
-end
-function datetimediff(t1,t2)
-	-- возвращает разницу в секундах между t2 и t1 (оба стандартного типа datetime библиотеки qlua)
-	return (((((t2.year-t1.year)*12+t2.month-t1.month)*30+t2.day-t1.day)*24+t2.hour-t1.hour)*60+t2.min-t1.min)*60+t2.sec-t1.sec
-	--return math.abs(d)
 end
 -- number formatting
 function formatNumber(amount)

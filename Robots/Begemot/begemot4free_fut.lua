@@ -12,6 +12,7 @@ require"QL"
 --require"luaxml"
 require'iuplua'
 VERSION='0.5.0'
+NEED_LIB_VERSION=525
 log="begemot4free.log"
 settings_file="settings.lua"
 --watch_list={}
@@ -31,9 +32,15 @@ function setStatus(type)
 	if type=='Offer' then tbl:SetValue(watch_list.line,'OfferStatus',watch_list.status_offer) end
 end
 function getSettings(path)
+	
+	if LIBVERSIONINT==nil or LIBVERSIONINT<NEED_LIB_VERSION then
+		message("Begemot4Free "..VERSION.." Версия библиотеки ниже необходимой!.",3)
+		toLog(log,"QL Library version less then required. Ver="..LIBVERSION..' required='..NEED_LIB_VERSION)
+		return false
+	end
 	toLog(log,"Try to open settings "..path)
 	local f=io.open(path)
-	if f==nil then 
+	if f==nil then
 		toLog(log,"File can`t be openned! File would be created.")
 		watch_list={}
 		watch_list.code=' '
@@ -71,6 +78,8 @@ function getSettings(path)
 		toLog(log,"Cancelled on GetSettingsParam")
 		return false
 	end
+	watch_list.code=trim(watch_list.code)
+	watch_list.class=trim(watch_list.class)
 	watch_list.position_bid=0
 	watch_list.position_offer=0
 	watch_list.status_bid=""
@@ -167,7 +176,7 @@ function TradeBid(cur_begbid,new_begbid,new_begoffer,soffer,sec_code)
 		local trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,new_begoffer-watch_list.minstep))
 		if trid~=nil then transactions[trid]="bid" watch_list.status_bid="waitclose" watch_list.trans_bid=trid setStatus('Bid') end
 		toLog(log,ms)
-	-- если стоим на закрытие и бегемота нет и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
+	-- если стоим на закрытие и бегемота нет и можно "улучшить" место оставаясь лучшим офером - передвигаемся
 	elseif watch_list.status_bid=="close" and watch_list.order_bid.price<soffer-watch_list.minstep and watch_list.order_bid.qty==boffer_volume then
 		toLog(log,"BId. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		trid,ms=moveOrder(0,watch_list.order_bid.ordernum,toPrice(sec_code,soffer-watch_list.minstep))
@@ -211,7 +220,7 @@ function TradeOffer(cur_begoffer,new_begoffer,new_begbid,sbid,sec_code)
 		local trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,new_begbid+watch_list.minstep))
 		if trid~=nil then transactions[trid]="offer" watch_list.status_offer="waitclose" watch_list.trans_offer=trid setStatus('Offer')end
 		toLog(log,ms)
-	-- если стоим на закрытие и можно "улучшить" место оставаясь лучшим офером - передвигаемся 
+	-- если стоим на закрытие и можно "улучшить" место оставаясь лучшим офером - передвигаемся
 	elseif watch_list.status_offer=="close" and watch_list.order_offer.price>sbid+watch_list.minstep and watch_list.order_offer.qty==bbid_volume then
 		toLog(log,"Offer. если стоим на закрытие и бегемота нет и можно улучшить место оставаясь лучшим офером - передвигаемся ")
 		trid,ms=moveOrder(0,watch_list.order_offer.ordernum,toPrice(sec_code,sbid+watch_list.minstep))
@@ -351,7 +360,7 @@ function OnOrderDo(order)
 			end
 		end
 		--if order.trans_id==watch_list.trans_bid then watch_list.trans_bid=0 end
-		if orderflags2table(order.flags).cancelled then 
+		if orderflags2table(order.flags).cancelled then
 			transactions[order.trans_id]=""
 			if watch_list.status_bid=="" then --[[watch_list.trans_bid=0]] toLog(log,"Bid order cancelled") watch_list.order_bid={} end
 		end
@@ -392,7 +401,7 @@ function OnOrderDo(order)
 			end
 		end
 		--if order.trans_id==watch_list.trans_offer then watch_list.trans_offer=0 end
-		if orderflags2table(order.flags).cancelled then 
+		if orderflags2table(order.flags).cancelled then
 			--transactions[order.trans_id]=""
 			if watch_list.status_offer=="" then --[[watch_list.trans_offer=0]] toLog(log,"Offer order cancelled") watch_list.order_offer={} end
 		end
@@ -493,10 +502,10 @@ end
 function OnParam(pclass,psec)
 	if not is_run or psec~=watch_list.code then return end
 	local t=tonumber(getParamEx(pclass,psec,"LAST").param_value)
-	if last_trade~=t then 
+	if last_trade~=t then
 		on_param[#on_param+1]=t
-		--table.insert(on_param,t) 
-		last_trade=t 
+		--table.insert(on_param,t)
+		last_trade=t
 	end
 end
 function OnTransReply(reply)
