@@ -135,7 +135,7 @@ function allGreeks(opt_type,settleprice,strike,volatility,pdaystomate,risk_free)
 	local temp=settleprice*exp_risk_days
 
 	local delta,gamma,vega,thetha,rho=0,0,0,0,0
-	
+
 	if opt_type=="Call" then
 		delta=exp_risk_days*normdistr_d1
 		gamma=100*normalDistrDensity(log_settle_strike)/(settleprice*volatility*sqrt_pdays)
@@ -204,7 +204,7 @@ function buildPlot(trdacc,base)
 	plot=iup.pplot{title='Yeild to mate',MARGINBOTTOM="65", MARGINLEFT="65", AXS_XLABEL="Strike", AXS_YLABEL="Yield", LEGENDSHOW="YES", LEGENDPOS="TOPLEFT", GRID='YES', AXS_YCROSSORIGIN='NO',AXS_XCROSSORIGIN='NO'}
 	gui[trdacc][base].plot_dialog=iup.dialog{plot,size='200x200',title='Yield to mate plot '..trdacc..':'..base}
 	iup.PPlotBegin(plot, 0)
-	
+
 	--last=882.2
 	local max_yield=0
 	local min_yield=99999999999999
@@ -238,7 +238,7 @@ function buildPlot(trdacc,base)
 	toLog(log,'center index='..iup.PPlotEnd(plot))
 	plot.ds_legend='Current price'
 	plot.ds_color='0 0 0'
-	
+
 	if gui[trdacc][base].plot_dialog.visible=='NO' then gui[trdacc][base].plot_dialog:show() end
 end
 -- our functions
@@ -490,7 +490,8 @@ function main()
 	end
 	while is_run do
 		-- calculation`s with sleep. not callbacks
-		if getSTime()>last_calc_time+period and portfolios_list~=nil then
+		local time=getSTime()
+		if (time==nil) or (time>last_calc_time+period and portfolios_list~=nil) then
 			toLog(log,'Time to calculate new values')
 			for k,v in pairs(portfolios_list) do
 				for k1,v1 in pairs(v) do
@@ -500,7 +501,7 @@ function main()
 				end
 			end
 			updateGUI()
-			last_calc_time=getSTime()
+			last_calc_time=time
 		elseif #futures_holding~=0 then
 			local res=false
 			for i=0,#futures_holding do

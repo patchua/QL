@@ -329,8 +329,8 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 		["STOPPRICE"]=toPrice(security,price,class),
 		["OFFSET_UNITS"]=offsetunits,
 		["SPREAD_UNITS"]=deffspreadunits,
-		["OFFSET"]=tonumber(offset),
-		["SPREAD"]=tonumber(deffspread),
+		["OFFSET"]=tostring(offset),
+		["SPREAD"]=tostring(deffspread),
 		["ACCOUNT"]=tostring(account)
 	}
 	if client_code==nil then
