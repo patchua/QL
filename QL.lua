@@ -773,7 +773,7 @@ function getPosition(security,account)
 				if row.currentbal==nil then
 					return 0
 				else
-					return row.currentpos
+					return row.currentbal
 				end
 			end
 		end
