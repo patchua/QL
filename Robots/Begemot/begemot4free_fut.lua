@@ -1,4 +1,4 @@
--- version 0.5.0
+-- version 0.5.2
 -- bug FIXed in TradeBid, TradeOffer, FindBidClosePrice
 -- 0.3 transaction sync mechanizm
 -- 0.3.1 reduce exess transactions
@@ -8,11 +8,12 @@
 -- 0.4.2 interface at settings load
 -- 0.4.3 bug in close
 -- GUI & initialization method changed
+-- 0.5.1 bad close slippage parameter
+-- 0.5.2 close script if table closed
 require"QL"
 --require"luaxml"
 require'iuplua'
 VERSION='0.5.0'
-NEED_LIB_VERSION=525
 log="begemot4free.log"
 settings_file="settings.lua"
 --watch_list={}
@@ -31,13 +32,14 @@ function setStatus(type)
 	if type=='Bid' then tbl:SetValue(watch_list.line,'BidStatus',watch_list.status_bid) end
 	if type=='Offer' then tbl:SetValue(watch_list.line,'OfferStatus',watch_list.status_offer) end
 end
-function getSettings(path)
-	
-	if LIBVERSIONINT==nil or LIBVERSIONINT<NEED_LIB_VERSION then
-		message("Begemot4Free "..VERSION.." Версия библиотеки ниже необходимой!.",3)
-		toLog(log,"QL Library version less then required. Ver="..LIBVERSION..' required='..NEED_LIB_VERSION)
-		return false
+function OnTableClose(t_id, msg,  par1, par2)
+	if msg==QTABLE_CLOSE then
+		toLog(log,'Table closed. Stop script')
+		message('Begemot stopped.',3)
+		OnStop()
 	end
+end
+function getSettings(path)
 	toLog(log,"Try to open settings "..path)
 	local f=io.open(path)
 	if f==nil then
@@ -53,11 +55,12 @@ function getSettings(path)
 		watch_list.client_code=' '
 		watch_list.bidEnable=0
 		watch_list.offerEnable=0
+		watch_list.bad_close_slippage=1
 	else f:close() dofile(path) end
 	toLog(log,"settings loaded")
 	toLog(log,watch_list)
 	ret, watch_list.code,watch_list.class,watch_list.offerEnable,watch_list.bidEnable,watch_list.volume_bid,watch_list.volume_offer,watch_list.tp,
-	watch_list.volume,watch_list.account,watch_list.client_code=
+	watch_list.bad_close_slippage,watch_list.volume,watch_list.account,watch_list.client_code=
       iup.GetParam("Begemot4Free "..VERSION, nil,
                   "Код бумаги: %s\n"..
 				  "Код класса: %s\n"..
@@ -66,11 +69,12 @@ function getSettings(path)
 				  "Объем бегемота для Бид: %i\n"..
 				  "Объем бегемота для Аск : %i\n"..
 				  "Тэйк-профит (в шагах цены): %i\n"..
+				  "Проскальзывание екстренного закрытия: %i\n"..
 				  "Объем заявок: %i\n"..
 				  "Номер счета: %s\n"..
 				  "Код клиента: %s\n",
 				  watch_list.code,watch_list.class,watch_list.offerEnable,watch_list.bidEnable,watch_list.volume_bid,watch_list.volume_offer,watch_list.tp,
-	watch_list.volume,watch_list.account,watch_list.client_code)
+	watch_list.bad_close_slippage,watch_list.volume,watch_list.account,watch_list.client_code)
 	toLog(log,"GetSettingsParam done")
 	if (not ret) then
 		--iup.Message("Begemot "..VERSION,"Запуск скрипта отменен.")
@@ -78,8 +82,6 @@ function getSettings(path)
 		toLog(log,"Cancelled on GetSettingsParam")
 		return false
 	end
-	watch_list.code=trim(watch_list.code)
-	watch_list.class=trim(watch_list.class)
 	watch_list.position_bid=0
 	watch_list.position_offer=0
 	watch_list.status_bid=""
@@ -99,6 +101,7 @@ function getSettings(path)
 	tbl:AddColumn('BidStatus',QTABLE_STRING_TYPE,15)
 	tbl:AddColumn('OfferEnable',QTABLE_CACHED_STRING_TYPE,15)
 	tbl:AddColumn('OfferStatus',QTABLE_STRING_TYPE,15)
+	tbl:SetTableNotificationCallback(OnTableClose)
 	tbl:Show()
 	local l=tbl:AddLine()
 	watch_list.line=l
@@ -421,7 +424,7 @@ function OnAllTradeDo(trade)
 	toLog(log,s)
 	--toLog(log,trade)
 	-- check bad data
-	if watch_list.status_bid=="close" and trade<watch_list.open_price_bid and (not watch_list.bad_bid) then
+	if watch_list.status_bid=="close" and trade<watch_list.open_price_bid-watch_list.bad_close_slippage*watch_list.minstep and (not watch_list.bad_bid) then
 		toLog(log,"Trade lower then bid open price. Trade="..trade.." OpenPrice="..watch_list.open_price_bid.." S="..watch_list.status_bid)
 		watch_list.bad_bid=true
 		local bask=tonumber(getParamEx(watch_list.class,watch_list.code,"OFFER").param_value)
@@ -432,7 +435,7 @@ function OnAllTradeDo(trade)
 			toLog(log,ms)
 		end
 	end
-	if watch_list.status_offer=="close" and trade>watch_list.open_price_offer and (not watch_list.bad_offer) then
+	if watch_list.status_offer=="close" and trade>watch_list.open_price_bid+watch_list.bad_close_slippage*watch_list.minstep and (not watch_list.bad_offer) then
 		toLog(log,"Trade upper then offer open price. Trade="..trade.." OpenPrice="..watch_list.open_price_offer.." S="..watch_list.status_offer)
 		watch_list.bad_offer=true
 		local bbid=tonumber(getParamEx(watch_list.class,watch_list.code,"BID").param_value)
