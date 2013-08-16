@@ -491,7 +491,7 @@ function main()
 	while is_run do
 		-- calculation`s with sleep. not callbacks
 		local time=getSTime()
-		if (time==nil) or (time>last_calc_time+period and portfolios_list~=nil) then
+		if (time~=nil) and (time>last_calc_time+period and portfolios_list~=nil) then
 			toLog(log,'Time to calculate new values')
 			for k,v in pairs(portfolios_list) do
 				for k1,v1 in pairs(v) do

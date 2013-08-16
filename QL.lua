@@ -1048,6 +1048,7 @@ Commmon Trading Signals
 function crossOver(bar,chart_name1,val2,parameter,line1,line2)
 	-- ¬озвращает true если график с идентификатором chart_name1 пересек снизу вверх график (или значение) val2 в баре bar.
 	-- параметры parameter,line1,line2 необ€зательны. ѕо умолчани€ равны close,0,0 соответственно
+	-- вторым параметром возвращаетс€ точка пересечени€ (цена)
 	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
 	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
@@ -1056,7 +1057,10 @@ function crossOver(bar,chart_name1,val2,parameter,line1,line2)
 	if type(val2)=='string' then
 		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
-		if candle1l[par]>candle2l[par] and candle1p[par]<=candle2p[par] then return true else return false end
+		if candle1l[par]>candle2l[par] and candle1p[par]<=candle2p[par] then
+			local p=(candle2p[par]*(candle1l[par]-candle1p[par])-candle1p[par]*(candle2l[par]-candle2p[par]))/((candle1l[par]-candle1p[par])-(candle2l[par]-candle2p[par]))
+			return true,p
+		else return false end
 	elseif type(val2)=='number' then
 		if candle1l[par]>val2 and candle1p[par]<=val2 then return true else return false end
 	else
@@ -1066,6 +1070,7 @@ end
 function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
 	-- ¬озвращает true если график с идентификатором chart_name1 пересек сверху вниз  график (или значение) val2 в баре bar.
 	-- параметры parameter,line1,line2 необ€зательны. ѕо умолчани€ равны close,0,0 соответственно
+	-- вторым параметром возвращаетс€ точка пересечени€ (цена), если есть пересечение
 	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
 	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
@@ -1073,7 +1078,10 @@ function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
 	if type(val2)=='string' then
 		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
-		if candle1l[par]<candle2l[par] and candle1p[par]>=candle2p[par] then return true else return false end
+		if candle1l[par]<candle2l[par] and candle1p[par]>=candle2p[par] then
+			local p=(candle2p[par]*(candle1l[par]-candle1p[par])-candle1p[par]*(candle2l[par]-candle2p[par]))/((candle1l[par]-candle1p[par])-(candle2l[par]-candle2p[par]))
+			return true,p
+		else return false end
 	elseif type(val2)=='number' then
 		if candle1l[par]<val2 and candle1p[par]>=val2 then return true else return false end
 	else
