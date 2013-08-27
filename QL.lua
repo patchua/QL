@@ -748,7 +748,7 @@ function killAllStopOrders(table_mask)
 	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. order_nums:"..result_str
 end
 function getPosition(security,account)
-    --возвращает чистую позицию по инструменту
+    --возвращает чистую позицию по инструменту  и цену преобретения
 	-- для срочного рынка передаем номер счета, для спот-рынка код-клиента
 	local class_code=getSecurityInfo("",security).class_code
     if string_find(FUT_OPT_CLASSES,class_code)~=nil then
@@ -759,7 +759,7 @@ function getPosition(security,account)
 				if row.totalnet==nil then
 					return 0
 				else
-					return row.totalnet
+					return row.totalnet,row.avrposnprice
 				end
 			end
 		end
@@ -773,7 +773,7 @@ function getPosition(security,account)
 				if row.currentbal==nil then
 					return 0
 				else
-					return row.currentbal
+					return row.currentbal, row.awg_position_price
 				end
 			end
 		end
@@ -927,14 +927,12 @@ function QTable:GetPosition()
 	 local top, left, bottom, right = GetWindowRect(self.t_id)
      return top, left, right-left, bottom-top
 end
-function QTable:SetSizeSuitable(a,b)
+function QTable:SetSizeSuitable(size_wnd_title,size_col_title,size_row)
    -- Функция меняет размер окна таблицы в соответствии с текущем количеством отображаемых строк
-   if a==nil then a=42 end
-   if b==nil then b=15 end
    local top, left, bottom, right = GetWindowRect(self.t_id)
-   self.x, self.y, self.dx, self.dy = top, left, right-left, bottom-top
+   self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
    self.rows, self.cols = GetTableSize(self.t_id)
-   self.dy=a+self.rows*b
+   self.dy = (size_col_title or 42) + self.rows * (size_row or 15)
    return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
 -- only for Quik version 6.7+
