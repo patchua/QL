@@ -1,5 +1,5 @@
-LIBVERSION='0.5.2.5'
-LIBVERSIONINT=525
+LIBVERSION='0.5.2.6'
+LIBVERSIONINT=526
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -191,11 +191,17 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		transaction.client_code=client_code
 	end
 	if string_find(FUT_OPT_CLASSES,class)~=nil then
+		local sign=0
 		if direction=="B" then
-			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMAX").param_value,class)
+			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemax").param_value),class)
+			toLog(Log,'IN pricemax ='..transaction.price)
+			sign=1
 		else
-			transaction.price=toPrice(security,getParamEx(class,security,"PRICEMIN").param_value,class)
+			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemin").param_value),class)
+			toLog(Log,'IN pricemin ='..transaction.price)
+			sign=-1
 		end
+		if transaction.price==0 then transaction.price=tonumber(getParamEx(class,security,"last").param_value)+sign*20*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value) end
 	else
 		transaction.price="0"
 	end
@@ -208,7 +214,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	if res~="" then
 		return nil, "QL.sendMarket():"..res
 	else
-		return trans_id, "QL.sendMarket(): Market order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+		return trans_id, "QL.sendMarket(): Market order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id..' Price='..transaction.price
 	end
 end
 function sendStop(class,security,direction,stopprice,dealprice,volume,account,exp_date,client_code,comment)
@@ -243,7 +249,7 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 	if exp_date==nil then
 		transaction["EXPIRY_DATE"]="GTC"
 	else
-		transaction['EXPIRY_DATE']=exp_date
+		transaction['EXPIRY_DATE']=tostring(exp_date)
 	end
 	if comment~=nil then
 		transaction.comment=string_sub(tostring(comment),0,20)
@@ -759,7 +765,7 @@ function getPosition(security,account)
 				if row.totalnet==nil then
 					return 0
 				else
-					return row.totalnet,row.avrposnprice
+					return tonumber(row.totalnet),tonumber(getParamEx(class_code,security,'last').param_value)
 				end
 			end
 		end
@@ -773,7 +779,7 @@ function getPosition(security,account)
 				if row.currentbal==nil then
 					return 0
 				else
-					return row.currentbal, row.awg_position_price
+					return tonumber(row.currentbal), tonumber(row.awg_position_price)
 				end
 			end
 		end
@@ -1021,10 +1027,10 @@ function getCandle(chart_name,bar,line)
 	local lline=0
 	local lbar=n-1
 	if line~=nil then lline=tonumber(line) end
-	if bar~=nil then lbar=tonumber(bar) end
-	if lbar>n then return nil,'Spacified bar='..bar..' doesn`t exist' end
+	if bar~=nil then lbar=lbar-tonumber(bar) end
+	if lbar>n or lbar<1 then return nil,'Spacified bar='..bar..' doesn`t exist' end
 	local t,n,p=getCandlesByIndex(chart_name,lline,lbar,1)
-	if t~=nil then return t[0] else return nil,'Error gettind Candles from '..chart_name end
+	if t~=nil and n>=1 and t[0]~=nil and t[0].doesExist==1 then return t[0] else return nil,'Error gettind Candles from '..chart_name end
 end
 function getPrevCandle(chart_name,line)
 	-- возвращает пред-последнюю свечу для графика с идентификатором chart_name
@@ -1032,7 +1038,7 @@ function getPrevCandle(chart_name,line)
 	-- возвращает таблицу Луа с запришиваемой свечей или nil и сообщение с диагностикой
 	if not isChartExist(chart_name) then return nil,'Chart doesn`t exist' end
 	local n=getNumCandles(chart_name)
-	return getCandle(chart_name,n-2,line)
+	return getCandle(chart_name,1,line)
 end
 function getLastCandle(chart_name,line)
 	-- возвращает последнюю свечу для графика с идентификатором chart_name
@@ -1044,20 +1050,22 @@ end
 Commmon Trading Signals
 ]]
 function crossOver(bar,chart_name1,val2,parameter,line1,line2)
-	-- Возвращает true если график с идентификатором chart_name1 пересек снизу вверх график (или значение) val2 в баре bar.
+	-- Возвращает true если график с идентификатором chart_name1 пересек снизу вверх график (или значение) val2 в баре со смещением bar.
 	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
 	-- вторым параметром возвращается точка пересечения (цена)
 	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
-	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
+	local candle1l=getCandle(chart_name1,bar,line1)
+	local candle1p=getCandle(chart_name1,bar+1,line1)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
 	local par=parameter or 'close'
 	--toLog(log,'par='..par)
 	if type(val2)=='string' then
-		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)
+		local candle2l=getCandle(val2,bar,line2)
+		local candle2p=getCandle(val2,bar+1,line2)
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
 		if candle1l[par]>candle2l[par] and candle1p[par]<=candle2p[par] then
 			local p=(candle2p[par]*(candle1l[par]-candle1p[par])-candle1p[par]*(candle2l[par]-candle2p[par]))/((candle1l[par]-candle1p[par])-(candle2l[par]-candle2p[par]))
-			return true,p
+			return true,tonumber(p)
 		else return false end
 	elseif type(val2)=='number' then
 		if candle1l[par]>val2 and candle1p[par]<=val2 then return true else return false end
@@ -1070,15 +1078,22 @@ function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
 	-- параметры parameter,line1,line2 необязательны. По умолчания равны close,0,0 соответственно
 	-- вторым параметром возвращается точка пересечения (цена), если есть пересечение
 	if bar==nil or chart_name1==nil or val2==nil then return false,'Bad parameters' end
-	local candle1l,candle1p=getCandle(chart_name1,bar,line1),getCandle(chart_name1,bar-1,line1)
+	local candle1l=getCandle(chart_name1,bar,line1)
+	local candle1p=getCandle(chart_name1,bar+1,line1)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name1 end
 	local par=parameter or 'close'
 	if type(val2)=='string' then
-		local candle2l,candle2p=getCandle(val2,bar,line2),getCandle(val2,bar-1,line2)
+		local candle2l=getCandle(val2,bar,line2)
+		local candle2p=getCandle(val2,bar+1,line2)
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
 		if candle1l[par]<candle2l[par] and candle1p[par]>=candle2p[par] then
 			local p=(candle2p[par]*(candle1l[par]-candle1p[par])-candle1p[par]*(candle2l[par]-candle2p[par]))/((candle1l[par]-candle1p[par])-(candle2l[par]-candle2p[par]))
-			return true,p
+			toLog(Log,'-----')
+			toLog(Log,candle2l)
+			toLog(Log,'-----')
+			toLog(Log,candle2p)
+
+			return true,tonumber(p)
 		else return false end
 	elseif type(val2)=='number' then
 		if candle1l[par]<val2 and candle1p[par]>=val2 then return true else return false end
@@ -1349,6 +1364,7 @@ function HiResTimer()
 	local c1=qpc()
 	return (c1-c0)/f0
 end
+-- time and date helpers
 function getSTime()
 	--возвращает текущее время сервера в виде числа формата HHMMSS
 	local t = ""
@@ -1515,14 +1531,14 @@ function randomseed(x)
 	RANDOM_SEED=math_floor(tonumber(x))
 end
 -- file helers
-function directory_exists(directory)
+function directoryExists(directory)
 -- Проверка существования папки
 -- Возвращает true/false результат выполнения
 -- строка диагностики или nil в случае успеха
 -- имя папки в случае ошибки
 	return os.rename(directory,directory)
 end
-function filesize(file)
+function fileSize(file)
 -- Получение размера файла
 -- Параметр - имя файла либо дескриптор уже открытого файла
 -- Возвращает длину файла или nil и диагностику вторым параметром
@@ -1538,4 +1554,7 @@ function filesize(file)
 		file:seek("set",current_position)
 		end
 	return size
+end
+function fileExists(file)
+	if io.open(file)~=nil then io.close(file) return true else io.close(file) return false end
 end
