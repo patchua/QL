@@ -1,5 +1,5 @@
-LIBVERSION='0.5.2.6'
-LIBVERSIONINT=526
+LIBVERSION='0.5.2.5'
+LIBVERSIONINT=525
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -194,14 +194,14 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		local sign=0
 		if direction=="B" then
 			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemax").param_value),class)
-			toLog(Log,'IN pricemax ='..transaction.price)
+			--toLog(Log,'IN pricemax ='..transaction.price)
 			sign=1
 		else
 			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemin").param_value),class)
-			toLog(Log,'IN pricemin ='..transaction.price)
+			--toLog(Log,'IN pricemin ='..transaction.price)
 			sign=-1
 		end
-		if transaction.price==0 then transaction.price=tonumber(getParamEx(class,security,"last").param_value)+sign*20*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value) end
+		if transaction.price==0 then transaction.price=toPrice(security,tonumber(getParamEx(class,security,"last").param_value)+sign*20*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value),class) end
 	else
 		transaction.price="0"
 	end
