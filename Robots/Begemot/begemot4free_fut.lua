@@ -82,6 +82,11 @@ function getSettings(path)
 		toLog(log,"Cancelled on GetSettingsParam")
 		return false
 	end
+	watch_list.class=trim(watch_list.class)
+	watch_list.code=trim(watch_list.code)
+	watch_list.class=trim(watch_list.class)
+	watch_list.client_code=trim(watch_list.client_code)
+	watch_list.account=trim(watch_list.account)
 	watch_list.position_bid=0
 	watch_list.position_offer=0
 	watch_list.status_bid=""

@@ -1,5 +1,5 @@
-LIBVERSION='0.5.2.5'
-LIBVERSIONINT=525
+LIBVERSION='0.5.3.0'
+LIBVERSIONINT=530
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -201,7 +201,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 			--toLog(Log,'IN pricemin ='..transaction.price)
 			sign=-1
 		end
-		if transaction.price==0 then transaction.price=toPrice(security,tonumber(getParamEx(class,security,"last").param_value)+sign*20*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value),class) end
+		if tonumber(transaction.price)==0 then transaction.price=toPrice(security,tonumber(getParamEx(class,security,"last").param_value)+sign*10*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value),class) end
 	else
 		transaction.price="0"
 	end
@@ -753,9 +753,10 @@ function killAllStopOrders(table_mask)
 	end
 	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. order_nums:"..result_str
 end
-function getPosition(security,account)
+function getPosition(security,account,limit_kind)
     --возвращает чистую позицию по инструменту  и цену преобретения
 	-- для срочного рынка передаем номер счета, для спот-рынка код-клиента
+	-- также для спот-рінка есть возможность указать тип лимита (ПО УМОЛЧАНИЮ 0!)
 	local class_code=getSecurityInfo("",security).class_code
     if string_find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
@@ -775,7 +776,7 @@ function getPosition(security,account)
 		for i=0,getNumberOf("depo_limits") do
 			local row=getItem("depo_limits",i)
 			--toLog(log,row)
-			if row~=nil and row[securityfiledname]==security and row.client_code==account then
+			if row~=nil and row[securityfiledname]==security and row.client_code==account  and (row.limit_kind==limit_kind or 0) then
 				if row.currentbal==nil then
 					return 0
 				else
@@ -814,13 +815,13 @@ function QTable:new()
      end
 end
 function QTable:Show()
-     -- отобразить в терминале окно с созданной таблицей
-     CreateWindow(self.t_id)
-     if self.caption ~="" then
-         -- задать заголовок для окна
-         SetWindowCaption(self.t_id, self.caption)
-     end
-     self.created = true
+	-- отобразить в терминале окно с созданной таблицей
+	CreateWindow(self.t_id)
+	if self.caption ~="" then
+		-- задать заголовок для окна
+		SetWindowCaption(self.t_id, tostring(self.caption))
+	end
+	self.created = true
 end
 function QTable:IsClosed()
      --если окно с таблицей закрыто, возвращает «true»
@@ -831,19 +832,17 @@ function QTable:delete()
      return DestroyTable(self.t_id)
 end
 function QTable:GetCaption()
-    -- возвращает строку, содержащую заголовок таблицы
-	 if IsWindowClosed(self.t_id) then
-         return self.caption
-     else
-         return GetWindowCaption(self.t_id)
-     end
+	-- возвращает строку, содержащую заголовок таблицы
+	if not IsWindowClosed(self.t_id) then
+		self.caption = GetWindowCaption(self.t_id)
+	end
+	return self.caption
 end
 function QTable:SetCaption(s)
-     -- Задать заголовок таблицы
-	 self.caption = s
-	 if not IsWindowClosed(self.t_id) then
-         res = SetWindowCaption(self.t_id, tostring(s))
-     end
+	-- Задать заголовок таблицы (без параметров восстанавливает его, если был изменен извне библиотеки)
+	if IsWindowClosed(self.t_id) then return nil end
+	self.caption = s or self.caption
+	return SetWindowCaption(self.t_id, tostring(self.caption))
 end
 function QTable:AddColumn(name, c_type, width, ff )
     -- Добавить описание столбца name типа C_type в таблицу
@@ -900,13 +899,13 @@ end
 function QTable:AddLine(key)
    -- добавляет пустую строчку в место key или в конец таблицы и возвращает ее номер
    local line=InsertRow(self.t_id, key or -1)
-   if line==-1 then return nil else self.curr_line=self.curr_line+1 table.insert(self.data,line,{}) return line end
+   if line==-1 then return nil else self.curr_line=self.curr_line+1 table_insert(self.data,line,{}) return line end
 end
 function QTable:DeleteLine(key)
    -- удаляет строчку в месте key или в конце таблицы
    key = key or self.curr_line
    self.curr_line=self.curr_line-1
-   table.remove(self.data,key)
+   table_remove(self.data,key)
    return DeleteRow(self.t_id,key)
 end
 function QTable:GetSize()
@@ -914,7 +913,7 @@ function QTable:GetSize()
      return GetTableSize(self.t_id)
 end
 function QTable:GetValue(row, name)
--- Получить данные из ячейки по номеру строки и имени столбца
+	 -- Получить данные из ячейки по номеру строки и имени столбца
 	 local t={}
 	 local col_ind = self.columns[name].id
      if col_ind == nil then
@@ -924,22 +923,26 @@ function QTable:GetValue(row, name)
      return t
 end
 function QTable:SetPosition(x, y, dx, dy)
-     -- Задать координаты окна
-	 -- x,y - координаты левого верхнего угла; dx,dy - ширина и высота
-	 return SetWindowPos(self.t_id, x, y, dx, dy)
+	-- задает координаты окна: x,y - координаты левого верхнего угла; dx,dy - ширина и высота
+	-- так же GetPosition и SetSizeSuitable запоминают позицию окна и вызов SetPosition без параметров вернет окно на то место
+	self.x, self.y, self.dx, self.dy = (x or self.x), (y or self.y), (dx or self.dx), (dy or self.dy)
+	return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
-function QTable:GetPosition()
-     -- Функция возвращает координаты окна
-	 local top, left, bottom, right = GetWindowRect(self.t_id)
-     return top, left, right-left, bottom-top
+function QTable:GetPosition(size_wnd_title)
+	-- возвращает координаты окна (x, y, dx, dy), годные для SetPosition: x,y - координаты левого верхнего угла; dx,dy - ширина и высота
+	if not IsWindowClosed(self.t_id) then
+		local top, left, bottom, right = GetWindowRect(self.t_id)
+		self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
+	end
+	return self.x, self.y, self.dx, self.dy
 end
-function QTable:SetSizeSuitable(size_wnd_title,size_col_title,size_row)
-   -- Функция меняет размер окна таблицы в соответствии с текущем количеством отображаемых строк
-   local top, left, bottom, right = GetWindowRect(self.t_id)
-   self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
-   self.rows, self.cols = GetTableSize(self.t_id)
-   self.dy = (size_col_title or 42) + self.rows * (size_row or 15)
-   return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
+function QTable:SetSizeSuitable(rows,cols,size_wnd_title,size_col_title,size_row)
+	-- меняет размер окна таблицы в соответствии с переданными количествами строк и столбцов (кол-во столбцов пока не используется, не ясно, что с ним делать)
+	-- без параметра rows меняет вертикальный размер окна таблицы в соответствии с текущим количеством отображаемых строк
+	local top, left, bottom, right = GetWindowRect(self.t_id)
+	self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
+	self.dy = (size_col_title or 42) + (rows or self.curr_line) * (size_row or 15)
+	return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
 -- only for Quik version 6.7+
 function QTable:SetColor(row,col_name,b_color,f_color,sel_b_color,sel_f_color)
@@ -1141,7 +1144,7 @@ end
 function getSecurityClass(classes_list,sec_code)
    -- Функция возвращает код класса для бумаги на определенном рынке или режиме торгов или просто по списку классов или по getClassesList(), если первый параметр пустой
    if classes_list=="" then classes_list=getClassesList()
-   elseif classes_list=="MICEX-Spot" then classes_list="EQBR,EQBS,EQNL,EQLV,EQNE"
+   elseif classes_list=="MICEX-Spot" then classes_list="TQBR,TQBS,TQNL,TQLV,TQNE"
    elseif classes_list=="SMAL" then classes_list="SMAL"
    elseif classes_list=="UX-Spot" then classes_list="GTS"
    elseif classes_list=="UX-Fut" then classes_list="FUTUX"
