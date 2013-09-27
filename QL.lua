@@ -15,6 +15,8 @@ local string_lower=string.lower
 local string_len=string.len
 local string_sub=string.sub
 local string_upper=string.upper
+local table_insert=table.insert
+local table_remove=table.remove
 local RANDOM_SEED=socket.gettime()*10000
 
 FUT_OPT_CLASSES="FUTUX,OPTUX,SPBOPT,SPBFUT"
@@ -206,9 +208,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		transaction.price="0"
 	end
 	if comment~=nil then
-		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=string_sub(comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL'..comment,0,20) end
+		transaction.client_code=string_sub(transaction.client_code..'//'..tostring(comment),0,20)
 	else
-		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.comment=tostring('QL') else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
+		transaction.client_code=string_sub(transaction.client_code..'//QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -764,7 +766,7 @@ function getPosition(security,account,limit_kind)
 			local row=getItem("futures_client_holding",i)
 			if row~=nil and row[securityfiledname]==security and row.trdaccid==account then
 				if row.totalnet==nil then
-					return 0
+					return 0,0
 				else
 					return tonumber(row.totalnet),tonumber(getParamEx(class_code,security,'last').param_value)
 				end
@@ -778,7 +780,7 @@ function getPosition(security,account,limit_kind)
 			--toLog(log,row)
 			if row~=nil and row[securityfiledname]==security and row.client_code==account  and (row.limit_kind==limit_kind or 0) then
 				if row.currentbal==nil then
-					return 0
+					return 0,0
 				else
 					return tonumber(row.currentbal), tonumber(row.awg_position_price)
 				end
