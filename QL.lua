@@ -195,15 +195,26 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 	if string_find(FUT_OPT_CLASSES,class)~=nil then
 		local sign=0
 		if direction=="B" then
-			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemax").param_value),class)
+			transaction.price=getParamEx(class,security,"pricemax").param_value
+			if transaction.price==0 then
+				transaction.price=getParamEx(class,security,"offer").param_value+10*getParamEx(class,security,"SEC_PRICE_STEP").param_value
+			end
 			--toLog(Log,'IN pricemax ='..transaction.price)
 			sign=1
 		else
-			transaction.price=toPrice(security,tonumber(getParamEx(class,security,"pricemin").param_value),class)
+			transaction.price=getParamEx(class,security,"pricemin").param_value
+			--firat chance
+			if transaction.price==0 then
+				transaction.price=getParamEx(class,security,"bid").param_value-10*getParamEx(class,security,"SEC_PRICE_STEP").param_value
+			end
 			--toLog(Log,'IN pricemin ='..transaction.price)
 			sign=-1
 		end
-		if tonumber(transaction.price)==0 then transaction.price=toPrice(security,tonumber(getParamEx(class,security,"last").param_value)+sign*10*tonumber(getParamEx(class,security,"SEC_PRICE_STEP").param_value),class) end
+		-- last chance
+		if transaction.price==0 then
+			transaction.price=getParamEx(class,security,"last").param_value+sign*10*getParamEx(class,security,"SEC_PRICE_STEP").param_value
+		end
+		transaction.price=toPrice(security,transaction.price,class)
 	else
 		transaction.price="0"
 	end
@@ -938,11 +949,14 @@ function QTable:GetPosition(size_wnd_title)
 	end
 	return self.x, self.y, self.dx, self.dy
 end
-function QTable:SetSizeSuitable(rows,cols,size_wnd_title,size_col_title,size_row)
-	-- меняет размер окна таблицы в соответствии с переданными количествами строк и столбцов (кол-во столбцов пока не используется, не ясно, что с ним делать)
+function QTable:SetSizeSuitable(rows,cols,size_wnd_title,size_col_title,size_row,size_scroll)
+	-- меняет размер окна таблицы в соответствии с переданными количествами строк и столбцов
+	-- кол-во столбцов пока не используется (не ясно, что с ним делать), но если оно не nil, то к ширине окна таблицы добавляется ширина скроллбара
 	-- без параметра rows меняет вертикальный размер окна таблицы в соответствии с текущим количеством отображаемых строк
+	-- детальное описание и пример как работать с функцией http://forum.qlua.org/topic172.html
 	local top, left, bottom, right = GetWindowRect(self.t_id)
 	self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
+	if cols then self.dx = self.dx + (size_scroll or 16) end
 	self.dy = (size_col_title or 42) + (rows or self.curr_line) * (size_row or 15)
 	return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
