@@ -1,5 +1,5 @@
-LIBVERSION='0.5.3.1'
-LIBVERSIONINT=531
+LIBVERSION='0.5.3.2'
+LIBVERSIONINT=532
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -1259,6 +1259,17 @@ function tradeflags2table(flags)
 	local band=bit.band
 	--local tobit=bit.tobit
 	if band(flags, 4)~=0 then t.operation="S" else t.operation='B' end
+	return t
+end
+function alltradeflags2table(flags)
+	-- фнукция возвращает таблицу с полным описанием заявки по флагам
+	--[[ Атрибуты :operation("B" for Buy, "S" for Sell, "" for not defined(index for example))
+	]]
+	local t={}
+	local band=bit.band
+	--local tobit=bit.tobit
+	if band(flags, 1)~=0 then t.operation="S" end
+	if band(flags, 2)~=0 then t.operation='B' end
 	return t
 end
 function stoporderflags2table(flags)
