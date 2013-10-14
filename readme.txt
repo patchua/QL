@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.5.3.0
+Version 0.5.3.1
 // дАННАЯ ИНСТРУКЦИЯ СОДЕРЖИТ НЕ ПОЛНЫЙ НАБОР ДОСТУПНЫХ В БИБЛИОТЕКЕ ФУНКЦИЙ! ОБЯЗАТЕЛЬНО ЗАГЛЯНИТЕ ВНУТРЬ;)
 
 1. function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)

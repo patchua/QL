@@ -1,5 +1,5 @@
-LIBVERSION='0.5.3.0'
-LIBVERSIONINT=530
+LIBVERSION='0.5.3.1'
+LIBVERSIONINT=531
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -662,14 +662,11 @@ function killStopOrder(orderkey,security,class)
 		["ACTION"]="KILL_STOP_ORDER",
 		["STOP_ORDER_KEY"]=tostring(orderkey)
 	}
-	if (security==nil and class==nil) or (class~=nil and security==nil) then
+	if security==nil or class==nil then
 		local order=getRowFromTable("stop_orders",ordernumberfieldname,orderkey)
 		if order==nil then return nil,"QL.killStopOrder(): Can`t kill order. No such order in StopOrders table." end
 		transaction.classcode=order.class_code
 		transaction.seccode=order[securityfiledname]
-	elseif	security~=nil then
-		transaction.seccode=security
-		transaction.classcode=getSecurityInfo("",security).class_code
 	else
 		transaction.seccode=security
 		transaction.classcode=class
