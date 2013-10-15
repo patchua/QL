@@ -849,10 +849,10 @@ function QTable:GetCaption()
 	return self.caption
 end
 function QTable:SetCaption(s)
-	-- «адать заголовок таблицы (без параметров восстанавливает его, если был изменен извне библиотеки)
-	if IsWindowClosed(self.t_id) then return nil end
-	self.caption = s or self.caption
-	return SetWindowCaption(self.t_id, tostring(self.caption))
+   -- «адать заголовок таблицы (без параметров восстанавливает его, если был изменен извне библиотеки)
+   self.caption = s or self.caption
+   if IsWindowClosed(self.t_id) then return nil end
+   return SetWindowCaption(self.t_id, tostring(self.caption))
 end
 function QTable:AddColumn(name, c_type, width, ff )
     -- ƒобавить описание столбца name типа C_type в таблицу
@@ -867,8 +867,10 @@ function QTable:AddColumn(name, c_type, width, ff )
     return AddColumn(self.t_id, self.curr_col, name, true, c_type, width)
 end
 function QTable:Clear()
-     -- очистить таблицу
-     return Clear(self.t_id)
+   -- очистить таблицу
+   self.data={}
+   self.curr_line=0
+   return Clear(self.t_id)
 end
 function QTable:SetValue(row, col_name, data, formatted)
 	-- ”становить значение в €чейке
@@ -1138,6 +1140,14 @@ end
 --[[
 Support Functions
 ]]--
+function getTradeAccount(class_code)
+   -- ‘ункци€ возвращает таблицу с описанием торгового счета дл€ запрашиваемого кода класса
+   for i=0,getNumberOf("trade_accounts")-1 do
+      local trade_account=getItem("trade_accounts",i)
+      if string_find(trade_account.class_codes,class_code,1,1) then return trade_account end
+   end
+   return nil
+end
 function RGB2number(color)
 	-- for internal use makes Quik RGB type from string 'RRR GGG BBB'
 	if VERSIONLESS6713 then return false end
