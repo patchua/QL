@@ -151,9 +151,9 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		transaction.client_code=tostring(client_code)
 	end
 	if comment~=nil then
-		transaction.client_code=string_sub(transaction.client_code..'//'..tostring(comment),0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.client_code=string_sub(transaction.client_code..'//QL',0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
 	end
 	if market_maker~=nil and market_maker then
 		transaction['MARKET_MAKER_ORDER']='YES'
@@ -219,9 +219,9 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		transaction.price="0"
 	end
 	if comment~=nil then
-		transaction.client_code=string_sub(transaction.client_code..'//'..tostring(comment),0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.client_code=string_sub(transaction.client_code..'//QL',0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -265,9 +265,9 @@ function sendStop(class,security,direction,stopprice,dealprice,volume,account,ex
 		transaction['EXPIRY_DATE']=tostring(exp_date)
 	end
 	if comment~=nil then
-		transaction.comment=string_sub(tostring(comment),0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.comment='QL'
+		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -312,10 +312,10 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
-		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('//QL'..comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL'..comment,0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('/QL'..comment,0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL'..comment,0,20) end
 	else
 		transaction.comment=tostring(comment)
-		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('//QL',0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
+		if string_find(FUT_OPT_CLASSES,class)~=nil then	transaction.client_code=string_sub('/QL',0,20) else transaction.client_code=string_sub(transaction.client_code..'//QL',0,20) end
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -763,11 +763,11 @@ function killAllStopOrders(table_mask)
 	end
 	return true,"QL.killAllStopOrders(): Sended "..result_num.." transactions. order_nums:"..result_str
 end
-function getPosition(security,account,limit_kind)
+function getPosition(security,account,limit_kind,class_code)
     --возвращает чистую позицию по инструменту  и цену преобретения
 	-- для срочного рынка передаем номер счета, для спот-рынка код-клиента
-	-- также для спот-рінка есть возможность указать тип лимита (ПО УМОЛЧАНИЮ 0!)
-	local class_code=getSecurityInfo("",security).class_code
+	-- также для спот-рынка есть возможность указать тип лимита (ПО УМОЛЧАНИЮ 0!)
+	if class_code==nil then class_code=getSecurityInfo("",security).class_code end
     if string_find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
 		for i=0,getNumberOf("futures_client_holding") do
@@ -1106,10 +1106,10 @@ function crossUnder(bar,chart_name1,val2,parameter,line1,line2)
 		if candle2l==nil or candle2p==nil then return false,'Eror on getting candles for '..val2 end
 		if candle1l[par]<candle2l[par] and candle1p[par]>=candle2p[par] then
 			local p=(candle2p[par]*(candle1l[par]-candle1p[par])-candle1p[par]*(candle2l[par]-candle2p[par]))/((candle1l[par]-candle1p[par])-(candle2l[par]-candle2p[par]))
-			toLog(Log,'-----')
-			toLog(Log,candle2l)
-			toLog(Log,'-----')
-			toLog(Log,candle2p)
+			--toLog(Log,'-----')
+			--toLog(Log,candle2l)
+			--toLog(Log,'-----')
+			--toLog(Log,candle2p)
 
 			return true,tonumber(p)
 		else return false end
@@ -1136,6 +1136,92 @@ function turnUp(bar,chart_name,parameter,line)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
 	local par=parameter or "close"
 	if candle1l[par]>candle1p[par] then return true else return false end
+end
+--[[
+Logging class
+]]--
+QLog={}
+QLog.__index=QLog
+function QLog:new(file_path,log_level)
+	if file_path==nil then return nil end
+	q_log={}
+	setmetatable(q_log,QLog)
+	q_log.path=file_path
+	if log_level==nil then log_level='INFO' else log_level=string.upper(log_level) end
+	q_log.level=log_level
+	if log_level=='ERROR' then
+		q_log.levelint=1
+	elseif log_level=='WARNING' then
+		q_log.levelint=2
+	elseif log_level=='INFO' then
+		q_log.levelint=3
+	elseif log_level=='DEBUG' then
+		q_log.levelint=4
+	elseif log_level=='TRACE' then
+		q_log.levelint=5
+	else
+		toLog(file_path,"QLog. Unknown error level "..tostring(log_level)..'. Error level set to INFO.')
+	end
+	return q_log
+end
+function QLog:Log(value)
+	-- log with logging object level
+	Write(self.path,self.level,value)
+	--[[
+	if value~=nil then
+		lf=io.open(self.path,"a+")
+		if lf~=nil then
+			if type(value)=="string" or type(value)=="number" then
+				if io.type(lf)~="file" then	lf=io.open(self.path,"a+") end
+				lf:write(getHRDateTime()..": "..self.level..value.."\n")
+			elseif type(value)=='boolean' then
+				if io.type(lf)~="file" then	lf=io.open(self.path,"a+") end
+				lf:write(getHRDateTime()..": "..self.level..tostring(value).."\n")
+			elseif type(value)=="table" then
+				if io.type(lf)~="file" then	lf=io.open(self.path,"a+") end
+				lf:write(getHRDateTime()..": "..self.level..table2string(value).."\n")
+			end
+			if io.type(lf)~="file" then	lf=io.open(self.path,"a+") end
+			lf:flush()
+			if io.type(lf)=="file" then	lf:close() end
+		end
+	end
+	]]--
+end
+function QLog:Error(value)
+	Write(self.path,'ERROR',value)
+end
+function QLog:Warning(value)
+	if self.levelint>=2 then Write(self.path,'WARNING',value) end
+end
+function QLog:Info(value)
+	if self.levelint>=2 then Write(self.path,'INFO',value) end
+end
+function QLog:Debug(value)
+	if self.levelint>=2 then Write(self.path,'DEBUG',value) end
+end
+function QLog:Trace(value)
+	if self.levelint>=2 then Write(self.path,'TRACE',value) end
+end
+function Write(file_path,level, value)
+	if value~=nil then
+		lf=io.open(file_path,"a+")
+		if lf~=nil then
+			if type(value)=="string" or type(value)=="number" then
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
+				lf:write(getHRDateTime()..": "..level..' - '..value.."\n")
+			elseif type(value)=='boolean' then
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
+				lf:write(getHRDateTime()..": "..level..' - '..tostring(value).."\n")
+			elseif type(value)=="table" then
+				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
+				lf:write(getHRDateTime()..": "..level..' - '..table2string(value).."\n")
+			end
+			if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
+			lf:flush()
+			if io.type(lf)=="file" then	lf:close() end
+		end
+	end
 end
 --[[
 Support Functions
@@ -1230,7 +1316,7 @@ function toPrice(security,value,class)
 	-- преобразования значения value к цене инструмента правильного ФОРМАТА (обрезаем лишнии знаки после разделителя)
 	-- Возвращает строку
 	if (security==nil or value==nil) then return nil end
-	local scale=getParamEx(class or getSecurityInfo("",security).class_code,security,"SEC_SCALE").param_value
+	local scale=getSecurityInfo(class or getSecurityInfo("",security).class_code,security).scale
 	return string_format("%."..string_format("%d",scale).."f",tonumber(value))
 end
 function orderflags2table(flags)
