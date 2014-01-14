@@ -308,7 +308,7 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	if exp_date==nil then
 		transaction["EXPIRY_DATE"]="GTC"
 	else
-		transaction['EXPIRY_DATE']=exp_date
+		transaction['EXPIRY_DATE']=tostring(exp_date)
 	end
 	if comment~=nil then
 		transaction.comment=tostring(comment)
@@ -360,12 +360,12 @@ function sendTake(class,security,direction,price,volume,offset,offsetunits,deffs
 	if exp_date==nil then
 		transaction["EXPIRY_DATE"]="GTC"
 	else
-		transaction['EXPIRY_DATE']=exp_date
+		transaction['EXPIRY_DATE']=tostring(exp_date)
 	end
 	if comment~=nil then
-		transaction.comment=string_sub(tostring(comment),0,20)
+		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.comment='QL'
+		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
 	end
 	local res=sendTransaction(transaction)
 	if res~="" then
@@ -1680,4 +1680,10 @@ function fileSize(file)
 end
 function fileExists(file)
 	if io.open(file)~=nil then io.close(file) return true else io.close(file) return false end
+end
+
+function Assert(cond)
+	if cond then
+		a='Assertion!'..nil
+	end
 end
