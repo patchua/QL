@@ -1,5 +1,5 @@
 --vresion 0.3.0
--- transactions sync 
+-- transactions sync
 -- bug in workbid and workask
 -- moved from OnAllTrade to OnParam, no class in settings
 require"QL"
@@ -40,7 +40,7 @@ function OnInit()
 end
 function OnInitDo()
 	toLog(log,"set path="..getScriptPath().."\\settings.xml")
-	
+
 	settings=xml.load("settings.xml")
 	toLog(log,"Xml loaded")
 	if settings==nil then
@@ -60,7 +60,7 @@ function OnInitDo()
 	if tonumber(settings:find("askEnable").value)==1 then askEnable=true else askEnable=false end
 	toLog(log,"Settings loaded sucessfully.")
 	toLog(log,settings)
-		
+
 	step=getParamEx(class,security,"SEC_PRICE_STEP").param_value
 	is_run=true
 	toLog(log,"Start main. step="..step)
@@ -319,18 +319,18 @@ function workask(quotes)
 	toLog(log,"Workask ended.")
 end
 
-function OnParam(cl,sece)
-	if (not is_run or sec~=security) then return end 
+function OnParam(cl,sec)
+	if (not is_run or sec~=security) then return end
 	--toLog(log,"New AllTrade price="..trade.price)
 	local last=tonumber(getParamEx(cl,sec,"LAST").param_value)
 	if last_trade==last then return end
-	if (bid_status=="close" or bid_status=="waitclose") and last<bid_open_price-alert_slippage*step then 
-		bid_bad=true 
-		toLog(log,"New AllTrade="..last.." Bid_Bad=true") 
+	if (bid_status=="close" or bid_status=="waitclose") and last<bid_open_price-alert_slippage*step then
+		bid_bad=true
+		toLog(log,"New AllTrade="..last.." Bid_Bad=true")
 	end
-	if (ask_status=="close" or ask_status=="waitclose") and last>ask_open_price+alert_slippage*step then 
-		ask_bad=true 
-		toLog(log,"New AllTrade="..last.." Ask_Bad=true") 
+	if (ask_status=="close" or ask_status=="waitclose") and last>ask_open_price+alert_slippage*step then
+		ask_bad=true
+		toLog(log,"New AllTrade="..last.." Ask_Bad=true")
 	end
 end
 
