@@ -34,8 +34,6 @@ function main()
 		--получаем значения индикаторов
 
 		--обращаемся к короткому мувингу
-		n_chart1 = getNumCandles (chart1)
-		toLog(log,'chart1 num='..n_chart1)
 		if not isChartExist(chart1) then
 			toLog(log,'Can`t get data from chart '..chart1)
 			message('Не можем получить данные с графика '..chart1,1)
@@ -43,8 +41,6 @@ function main()
 			break
 		end
 		--обращаемся к длинному мувингу
-		n_chart2 = getNumCandles(chart2)
-		toLog(log,'chart1 num='..n_chart2)
 		if not isChartExist(chart2) then
 			toLog(log,'Can`t get data from chart '..chart2)
 			message('Не можем получить данные с графика '..chart2,1)
@@ -53,10 +49,10 @@ function main()
 		end
 		
 		--Детектор тренда
-		if turnUp(n_chart1-1,chart1) and turnUp(n_chart2-1,chart2) then
+		if turnUp(1,chart1) and turnUp(1,chart2) then
 			toLog(log,'TrendUp detected')
 			TREND_DETECTOR="Оба мувинга растут. Рынок быков" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
-		elseif turnDown(n_chart1-1,chart1) and turnDown(n_chart2-1,chart2) then
+		elseif turnDown(1,chart1) and turnDown(1,chart2) then
 			toLog(log,'TrendDown detected')
 			TREND_DETECTOR="Оба мувинга падают. Рынок медведей" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
 		else
@@ -66,12 +62,12 @@ function main()
 		--Генерация сигналов.
 
 		--Золотой крест
-		if crossOver(n_chart1-1,chart1,chart2) then
+		if crossOver(1,chart1,chart2) then
 			iup.Message('Новый сигнал!','ЗОЛОТОЙ КРЕСТ')	
 			toLog (log, "Golden Cross detected")
 			SIGNAL="GOLDEN CROSS" --выводим в таблицу КВИКа.
 		--Мёртвый крест
-		elseif crossUnder(n_chart1-1,chart1,chart2) then
+		elseif crossUnder(1,chart1,chart2) then
 			iup.Message('Новый сигнал!','МЁРТВЫЙ КРЕСТ')	
 			toLog (log, "Dead Cross detected")
 			SIGNAL="DEAD CROSS" --выводим в таблицу КВИКа.
