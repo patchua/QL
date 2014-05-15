@@ -1,5 +1,5 @@
-LIBVERSION='0.5.3.2'
-LIBVERSIONINT=532
+LIBVERSION='0.5.4.0'
+LIBVERSIONINT=540
 -- По всем вопросам можно писать тут - forum.qlua.org
 package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
@@ -154,6 +154,54 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
 		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
+	end
+	if market_maker~=nil and market_maker then
+		transaction['MARKET_MAKER_ORDER']='YES'
+	end
+	local res=sendTransaction(transaction)
+	if res~="" then
+		return nil, "QL.sendLimitSpot():"..res
+	else
+		return trans_id, "QL.sendLimitSpot(): Limit order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." Price="..price.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
+	end
+end
+function sendIceberg(class,security,direction,price,show_volume,volume,account,client_code,comment)
+	-- отправка лимитированной заявки
+	-- все параметры кроме кода клиента и коментария должны быть не нил
+	-- ВАЖНО! цена должна быть стрингом с количеством знаков после точки для данной бумаги
+	-- если код клиента нил - подлставляем счет
+	-- market_maker - признак заявки маркет-мейкера. true\false
+	-- Данная функция возвращает 2 параметра
+	--     1. ID присвоенный транзакции либо nil если транзакция отвергнута на уровне сервера Квик
+	--     2. Ответное сообщение сервера Квик либо строку с параметрами транзакции
+	if (class==nil or security==nil or direction==nil or price==nil or volume==nil or show_volume==nil or account==nil or client_code==nil) then
+		return nil,"QL.sendIceberg(): Can`t send order. Nil parameters."
+	end
+	
+	local trans_id=random_max()
+	local transaction={
+		["TRANS_ID"]=tostring(trans_id),
+		["ACTION"]="Ввод айсберг заявки",
+		["CLASSCODE"]=class,
+		["Класс"]=class,
+		["Инструмент"]=security,
+		["Лоты"]=string_format("%d",tostring(volume)),
+		["Видимое количество"]=string_format("%d",tostring(show_volume)),
+		["Цена"]=toPrice(security,price,class),
+		["Торговый счет"]=tostring(account),
+		["Примечание"]=tostring(client_code),
+		["Тип"]="Лимитированная",
+		["Тип по цене"]="по разным ценам",
+		["Тип по остатку"]="поставить в очередь",
+		["Тип ввода значения цены"]="По цене",
+	}
+	
+	if direction=='B' then transaction['К/П']='Покупка' else transaction['К/П']='Продажа' end
+	
+	if comment~=nil then
+		transaction["Примечание"]=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
+	else
+		transaction["Примечание"]=string_sub(transaction.client_code..'/QL',0,20)
 	end
 	if market_maker~=nil and market_maker then
 		transaction['MARKET_MAKER_ORDER']='YES'
@@ -323,6 +371,62 @@ function sendTPSL(class,security,direction,price,volume,tpoffset,sloffset,maxoff
 	else
 		return trans_id, "QL.sendStop(): Stop-order sended sucesfully. Class="..class.." Sec="..security.." Dir="..direction.." StopPrice="..stopprice.." DealPrice="..dealprice.." Vol="..volume.." Acc="..account.." Trans_id="..trans_id
 	end
+end
+function sendTakeProfitAndStopLimit(class,security, direction, price, stopprice, stopprice2, volume, offset, offsetunits, deffspread, deffspreadunits, account, exp_date, client_code, comment)
+
+   if class==nil or security==nil or direction==nil or price==nil or stopprice==nil or stopprice2==nil or volume==nil or account==nil or offset==nil or offsetunits==nil or deffspread==nil or deffspreadunits==nil then
+      return nil, "QL.sendTakeProfitAndStopLimit(): Can`t send order. Nil parameters.";
+   end
+
+   local trans_id = random_max();
+   
+   local transaction = {
+      ["TRANS_ID"]           = tostring(trans_id),
+      ["ACTION"]             = "NEW_STOP_ORDER",
+      ["CLASSCODE"]          = class,
+      ["SECCODE"]            = security,
+      ["STOP_ORDER_KIND"]    = 'TAKE_PROFIT_AND_STOP_LIMIT_ORDER',
+      ["OPERATION"]          = direction,
+      ["QUANTITY"]           = string_format("%d", tostring(volume)),
+      ["PRICE"]              = toPrice(security, price, class),       -- Цена заявки, за единицу инструмента.
+      ["STOPPRICE"]          = toPrice(security, stopprice, class),   -- тэйк-профит
+      ["STOPPRICE2"]         = toPrice(security, stopprice2, class),  -- стоп-лимит
+      ["OFFSET_UNITS"]       = offsetunits,
+      ["SPREAD_UNITS"]       = deffspreadunits,
+      ["OFFSET"]             = tostring(offset),
+      ["SPREAD"]             = tostring(deffspread),
+      ["ACCOUNT"]            = tostring(account),
+      ["MARKET_STOP_LIMIT"]  = "NO",
+      ["MARKET_TAKE_PROFIT"] = "NO",
+      ["ACCOUNT"]            = tostring(account),
+   }
+   
+   if client_code == nil then
+      transaction.client_code = tostring(account);
+   else
+      transaction.client_code = tostring(client_code);
+   end
+   
+   if exp_date == nil then
+      transaction["EXPIRY_DATE"] = "GTC";
+   else
+      transaction['EXPIRY_DATE'] = tostring(exp_date);
+   end
+   
+   if comment ~= nil then
+      transaction.client_code = string_sub(transaction.client_code .. '/' .. tostring(comment), 0, 20);
+   else
+      transaction.client_code = string_sub(transaction.client_code .. '/QL', 0, 20);
+   end
+   
+   local res = sendTransaction(transaction);
+   
+   if res ~= "" then
+      return nil, "QL.sendTakeProfitAndStopLimit():" .. res;
+   else
+      return trans_id, "QL.sendTakeProfitAndStopLimit(): Take-profit-and-Stop-Limit sended sucesfully. Class=" ..class.. " Sec=" ..security.. " Dir=" ..direction.. " Price=" ..price.. " Offset=" ..offset.. ' OffsetUnits=' ..offsetunits.. ' Spread=' ..deffspread.. ' SpreadUnits=' ..deffspreadunits.. " Vol=" ..volume.. " Acc=" ..account.. " Trans_id=" ..trans_id;
+   end
+   
 end
 function sendTake(class,security,direction,price,volume,offset,offsetunits,deffspread,deffspreadunits,account,exp_date,client_code,comment)
 	-- отправка простой стоп-заявки

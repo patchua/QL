@@ -44,6 +44,7 @@ function main()
 		end
 		--обращаемся к длинному мувингу
 		n_chart2 = getNumCandles(chart2)
+		toLog(log,'chart1 num='..n_chart2)
 		if not isChartExist(chart2) then
 			toLog(log,'Can`t get data from chart '..chart2)
 			message('Не можем получить данные с графика '..chart2,1)
@@ -53,8 +54,10 @@ function main()
 		
 		--Детектор тренда
 		if turnUp(n_chart1-1,chart1) and turnUp(n_chart2-1,chart2) then
+			toLog(log,'TrendUp detected')
 			TREND_DETECTOR="Оба мувинга растут. Рынок быков" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
 		elseif turnDown(n_chart1-1,chart1) and turnDown(n_chart2-1,chart2) then
+			toLog(log,'TrendDown detected')
 			TREND_DETECTOR="Оба мувинга падают. Рынок медведей" --выводим переменную TREND_DETECTOR в таблицу КВИКа.
 		else
 			TREND_DETECTOR="Нет выраженного тренда"
