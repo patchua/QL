@@ -1299,13 +1299,13 @@ function QLog:Warning(value)
 	if self.levelint>=2 then Write(self.path,'WARNING',value) end
 end
 function QLog:Info(value)
-	if self.levelint>=2 then Write(self.path,'INFO',value) end
+	if self.levelint>=3 then Write(self.path,'INFO',value) end
 end
 function QLog:Debug(value)
-	if self.levelint>=2 then Write(self.path,'DEBUG',value) end
+	if self.levelint>=4 then Write(self.path,'DEBUG',value) end
 end
 function QLog:Trace(value)
-	if self.levelint>=2 then Write(self.path,'TRACE',value) end
+	if self.levelint>=5 then Write(self.path,'TRACE',value) end
 end
 function Write(file_path,level, value)
 	if value~=nil then
@@ -1773,7 +1773,7 @@ function fileSize(file)
     if type(file) == "string" then
 		local f,err = io.open(file,"r")
 		if not f then return nil,err end
-		size = filesize(F)
+		size = fileSize(f)
 		f:close()
 	else
 		local current_position = file:seek()
@@ -1783,7 +1783,8 @@ function fileSize(file)
 	return size
 end
 function fileExists(file)
-	if io.open(file)~=nil then io.close(file) return true else io.close(file) return false end
+	local f=io.open(file)
+	if f~=nil then io.close(f) return true else return false end
 end
 
 function Assert(cond)
