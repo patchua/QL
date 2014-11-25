@@ -1,5 +1,5 @@
 ﻿QL Library 
-Version 0.5.3.2
+Version 0.5.4.3
 // дАННАЯ ИНСТРУКЦИЯ СОДЕРЖИТ НЕ ПОЛНЫЙ НАБОР ДОСТУПНЫХ В БИБЛИОТЕКЕ ФУНКЦИЙ! ОБЯЗАТЕЛЬНО ЗАГЛЯНИТЕ ВНУТРЬ;)
 
 1. function sendLimitFO(class,security,direction,price,volume,account,comment,execution_condition,expire_date,market_maker)
@@ -206,3 +206,5 @@ Version 0.5.3.2
 	-- возвращает класс для бумаги security
 58. function datetimediff(t1,t2)
 	-- возвращает разницу в секундах между t2 и t1 (оба стандартного типа datetime библиотеки qlua)
+59. Class QLog
+    -- Класс для логирования. Создаем обьект лога QLog:new(file_path,log_level).Потокобезопасен.

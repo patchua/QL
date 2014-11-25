@@ -1,10 +1,11 @@
-LIBVERSION='0.5.4.0'
-LIBVERSIONINT=540
--- По всем вопросам можно писать тут - forum.qlua.org
-package.cpath=".\\?.dll;.\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll"..package.cpath
+LIBVERSION='0.5.4.3'
+LIBVERSIONINT=543
+-- По всем вопросам можно писать тут - forum.qlua.org 
+package.cpath=".\\?.dll; .\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files (x86)\\Lua\\5.1\\loadall.dll;C:\\Program Files (x86)\\Lua\\5.1\\clibs\\loadall.dll;C:\\Program Files\\Lua\\5.1\\?.dll;C:\\Program Files\\Lua\\5.1\\?51.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?.dll;C:\\Program Files\\Lua\\5.1\\clibs\\?51.dll;C:\\Program Files\\Lua\\5.1\\loadall.dll;C:\\Program Files\\Lua\\5.1\\clibs\\loadall.dll;"..package.cpath
 package.path=package.path..";.\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\?.lua;C:\\Program Files (x86)\\Lua\\5.1\\?\\init.lua;C:\\Program Files (x86)\\Lua\\5.1\\lua\\?.luac;C:\\Program Files\\Lua\\5.1\\lua\\?.lua;C:\\Program Files\\Lua\\5.1\\lua\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\?.lua;C:\\Program Files\\Lua\\5.1\\?\\init.lua;C:\\Program Files\\Lua\\5.1\\lua\\?.luac;"
 require"socket"
 local math_floor=math.floor
+local math_ceil=math.ceil
 local math_random=math.random
 local math_randomseed=math.randomseed
 local string_format=string.format
@@ -29,6 +30,10 @@ GREEN=32768
 RED=255
 LIGHT_GREEN=8454016
 LIGHT_RED=8421631
+ORANGE=33023
+PURPLE=8388736
+BLUE=16711680
+YELLOW=65535
 -- for custom colors you may use this tool http://www.colorspire.com/rgb-color-wheel/
 
 -- terminal versions globals
@@ -153,7 +158,7 @@ function sendLimitSpot(class,security,direction,price,volume,account,client_code
 	if comment~=nil then
 		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
 	else
-		transaction.client_code=string_sub(transaction.client_code..'/QL',0,20)
+		transaction.client_code=string_sub(transaction.client_code,0,20)
 	end
 	if market_maker~=nil and market_maker then
 		transaction['MARKET_MAKER_ORDER']='YES'
@@ -793,7 +798,7 @@ function killAllOrders(table_mask)
 	local row={}
 	local result_str=""
 
-	for i=0,getNumberOf("orders"),1 do
+	for i=0,getNumberOf("orders")-1,1 do
 		row=getItem("orders",i)
 		tokill=false
 		--toLog(log,"Row "..i.." onum="..row.order_num)
@@ -834,7 +839,7 @@ function killAllStopOrders(table_mask)
 	local tokill=true
 	local row={}
 	local result_str=""
-	for i=0,getNumberOf("stop_orders"),1 do
+	for i=0,getNumberOf("stop_orders")-1,1 do
 		row=getItem("stop_orders",i)
 		tokill=false
 		--toLog(log,"Row "..i.." onum="..row.order_num)
@@ -874,32 +879,24 @@ function getPosition(security,account,limit_kind,class_code)
 	if class_code==nil then class_code=getSecurityInfo("",security).class_code end
     if string_find(FUT_OPT_CLASSES,class_code)~=nil then
 	--futures
-		for i=0,getNumberOf("futures_client_holding") do
+		for i=1,getNumberOf("futures_client_holding") do
 			local row=getItem("futures_client_holding",i)
 			if row~=nil and row[securityfiledname]==security and row.trdaccid==account then
-				if row.totalnet==nil then
-					return 0,0
-				else
-					return tonumber(row.totalnet),tonumber(getParamEx(class_code,security,'last').param_value)
-				end
+				return tonumber(row['totalnet']),tonumber(getParamEx(class_code,security,'last').param_value)
 			end
 		end
 	else
 	-- spot
 		--toLog(log,'posnum='..getNumberOf("depo_limits"))
-		for i=0,getNumberOf("depo_limits") do
+		for i=1,getNumberOf("depo_limits") do
 			local row=getItem("depo_limits",i)
 			--toLog(log,row)
 			if row~=nil and row[securityfiledname]==security and row.client_code==account  and (row.limit_kind==limit_kind or 0) then
-				if row.currentbal==nil then
-					return 0,0
-				else
-					return tonumber(row.currentbal), tonumber(row.awg_position_price)
-				end
+				return tonumber(row['currentbal']), tonumber(row['awg_position_price'])
 			end
 		end
 	end
-    return 0
+    return 0,0
 end
 --[[
 Quik Table class QTable
@@ -1058,9 +1055,9 @@ function QTable:SetSizeSuitable(rows,cols,size_wnd_title,size_col_title,size_row
 	-- без параметра rows меняет вертикальный размер окна таблицы в соответствии с текущим количеством отображаемых строк
 	-- детальное описание и пример как работать с функцией http://forum.qlua.org/topic172.html
 	local top, left, bottom, right = GetWindowRect(self.t_id)
-	self.x, self.y, self.dx, self.dy = left, top-(size_wnd_title or 60), right-left, bottom-top
+	self.x, self.y, self.dx, self.dy = left, top, right-left, bottom-top
 	if cols then self.dx = self.dx + (size_scroll or 16) end
-	self.dy = (size_col_title or 42) + (rows or self.curr_line) * (size_row or 15)
+	self.dy = (size_wnd_title or 60)+(size_col_title or 42) + (rows or self.curr_line) * (size_row or 15)
 	return SetWindowPos(self.t_id, self.x, self.y, self.dx, self.dy)
 end
 -- only for Quik version 6.7+
@@ -1227,7 +1224,7 @@ function turnDown(bar,chart_name,parameter,line)
 	-- Возвращает true если график с идентификатором chart_name "развернулся вниз". Т.е. значение графика в баре bar меньше значения в баре bar-1.
 	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
 	if bar==nil or chart_name==nil then return false,'Bad parameters' end
-	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
+	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar+1,line)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
 	local par=parameter or "close"
 	if candle1l[par]<candle1p[par] then return true else return false end
@@ -1236,7 +1233,7 @@ function turnUp(bar,chart_name,parameter,line)
 	-- Возвращает true если график с идентификатором chart_name "развернулся вверх". Т.е. значение графика в баре bar больше значения в баре bar-1.
 	-- параметры parameter,line необязательны. По умолчания равны close,0 соответственно
 	if bar==nil or chart_name==nil then return false,'Bad parameters' end
-	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar-1,line)
+	local candle1l,candle1p=getCandle(chart_name,bar,line),getCandle(chart_name,bar+1,line)
 	if candle1l==nil or candle1p==nil then return false,'Eror on getting candles for '..chart_name end
 	local par=parameter or "close"
 	if candle1l[par]>candle1p[par] then return true else return false end
@@ -1251,6 +1248,8 @@ function QLog:new(file_path,log_level)
 	q_log={}
 	setmetatable(q_log,QLog)
 	q_log.path=file_path
+	q_log.to_write={}
+	q_log.file_available=true
 	if log_level==nil then log_level='INFO' else log_level=string.upper(log_level) end
 	q_log.level=log_level
 	if log_level=='ERROR' then
@@ -1270,7 +1269,7 @@ function QLog:new(file_path,log_level)
 end
 function QLog:Log(value)
 	-- log with logging object level
-	Write(self.path,self.level,value)
+	Write(self,self.level,value)
 	--[[
 	if value~=nil then
 		lf=io.open(self.path,"a+")
@@ -1293,38 +1292,46 @@ function QLog:Log(value)
 	]]--
 end
 function QLog:Error(value)
-	Write(self.path,'ERROR',value)
+	Write(self,self.level,value)
 end
 function QLog:Warning(value)
-	if self.levelint>=2 then Write(self.path,'WARNING',value) end
+	if self.levelint>=2 then Write(self,'WARNING',value) end
 end
 function QLog:Info(value)
-	if self.levelint>=3 then Write(self.path,'INFO',value) end
+	if self.levelint>=3 then Write(self,'INFO',value) end
 end
 function QLog:Debug(value)
-	if self.levelint>=4 then Write(self.path,'DEBUG',value) end
+	if self.levelint>=4 then Write(self,'DEBUG',value) end
 end
 function QLog:Trace(value)
-	if self.levelint>=5 then Write(self.path,'TRACE',value) end
+	if self.levelint>=5 then Write(self,'TRACE',value) end
 end
-function Write(file_path,level, value)
-	if value~=nil then
-		lf=io.open(file_path,"a+")
-		if lf~=nil then
-			if type(value)=="string" or type(value)=="number" then
-				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
-				lf:write(getHRDateTime()..": "..level..' - '..value.."\n")
-			elseif type(value)=='boolean' then
-				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
-				lf:write(getHRDateTime()..": "..level..' - '..tostring(value).."\n")
-			elseif type(value)=="table" then
-				if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
-				lf:write(getHRDateTime()..": "..level..' - '..table2string(value).."\n")
+function Write(obj,level,value)
+	local str=''
+	if type(value)=="string" or type(value)=="number" then
+		str=getHRDateTime()..": "..level..' - '..value.."\n"
+	elseif type(value)=='boolean' then
+		str=getHRDateTime()..": "..level..' - '..tostring(value).."\n"
+	elseif type(value)=="table" then
+		str=getHRDateTime()..": "..level..' - '..table2string(value).."\n"
+	else
+		str=getHRDateTime()..": "..level..' - '..tostring(value).."\n"
+	end
+	if obj.file_available then
+		obj.file_available=false
+		local lf=io.open(obj.path,'a+')
+		if #obj.to_write~=0 then
+			for _,ostr in pairs(obj.to_write) do
+				lf:write(ostr)
 			end
-			if io.type(lf)~="file" then	lf=io.open(file_path,"a+") end
-			lf:flush()
-			if io.type(lf)=="file" then	lf:close() end
+			obj.to_write={}
 		end
+		lf:write(str)
+		lf:flush()
+		lf:close()
+		obj.file_available=true
+	else
+		table.insert(obj.to_write,str)
 	end
 end
 --[[
@@ -1422,6 +1429,25 @@ function toPrice(security,value,class)
 	if (security==nil or value==nil) then return nil end
 	local scale=getSecurityInfo(class or getSecurityInfo("",security).class_code,security).scale
 	return string_format("%."..string_format("%d",scale).."f",tonumber(value))
+end
+function toPriceRound(security,value,class)
+	-- преобразования значения value к цене инструмента правильного ФОРМАТА С МАТЕМАТИЧЕСКИМ ОКРУГЛЕНИЕМ
+	-- Возвращает строку
+	if (security==nil or value==nil) then return nil end
+	local class=class or getSecurityInfo("",security).class_code
+	local scale=getSecurityInfo(class,security).scale
+	local pr_step=0+getParam(security,"SEC_PRICE_STEP",class)
+	return string_format("%."..string_format("%d",scale).."f",tonumber(toScale(value,pr_step)))
+end
+function getOrderStatus(order)
+	-- return order status - active,done,cancelled
+	local active
+	local band=bit.band
+	--local tobit=bit.tobit
+	if band(order.flags,2)~=0 then return "cancelled"
+	elseif band(order.flags,1)==0 then 
+		return "done" 
+	else return "active" end
 end
 function orderflags2table(flags)
 	-- фнукция возвращает таблицу с полным описанием заявки по флагам
@@ -1620,9 +1646,15 @@ function isTradeTime(exchange, shift)
 	-- в параметре shift следует указать сдвиг времени сервера брокера относительно времени бирж MICEX,FORTS (сервера размещены в Украине например)
 	if exchange==nil then return false end
 	local time=getSTime()
+	while time==nil do
+		sleep(100)
+		time=getSTime()
+		toLog('ql_error.log','Can`t get server time!')
+	end
 	local sp=0
 	if shift~=nil then sp=tonumber(shift) end
-	if (exchange=='UX' or exchange=='MICEX') and time+sp>103000 and time+sp<173000 then return true end
+	if exchange=='UX'  and time+sp>103000 and time+sp<173000 then return true end
+	if exchange=='MICEX' and time+sp>100000 and time+sp<184000 then return true end
 	if exchange=='FORTS' and ((time+sp>100000 and time+sp<140000) or (time+sp>140300 and time+sp<184500) or (time+sp>190000 and time+sp<235000)) then return true end
 	return false
 end
@@ -1727,6 +1759,16 @@ function formatNumber2(amount, scale)
 		formatted, k = string_gsub(formatted, "^(-?%d+)(%d%d%d)", "%1 %2")
 	end
 	return formatted
+end
+function toScale(number,scale,dir)
+	-- округление числа до scale вниз при dir==floor, вверх при dir==ceil или математическое при dir==nil
+	if not dir then
+		return math_floor((0.5*scale+number)/scale)*scale -- math rounding
+	elseif dir=='floor' then
+		return math_floor(number/scale)*scale  -- floor rounding
+	elseif dir=='ceil' then   
+		return math_ceil(number/scale)*scale  -- ceil rounding
+	end
 end
 function checkVersion(version)
 -- проверяем не ниже ли версия терсминала квик переданной
