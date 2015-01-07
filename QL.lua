@@ -236,7 +236,7 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 		["CLASSCODE"]=class,
 		["SECCODE"]=security,
 		["OPERATION"]=direction,
-		["TYPE"]="M",
+		--["TYPE"]="M",
 		["QUANTITY"]=string_format("%d",tostring(volume)),
 		["ACCOUNT"]=account
 	}
@@ -268,8 +268,10 @@ function sendMarket(class,security,direction,volume,account,client_code,comment)
 			transaction.price=getParamEx(class,security,"last").param_value+sign*10*getParamEx(class,security,"SEC_PRICE_STEP").param_value
 		end
 		transaction.price=toPrice(security,transaction.price,class)
+		transaction.type="L"
 	else
 		transaction.price="0"
+		transaction.type="M"
 	end
 	if comment~=nil then
 		transaction.client_code=string_sub(transaction.client_code..'/'..tostring(comment),0,20)
